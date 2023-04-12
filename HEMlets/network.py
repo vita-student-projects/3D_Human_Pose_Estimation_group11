@@ -1,6 +1,6 @@
 import torch 
 import numpy as np
-from resnet import * 
+from HEMlets.resnet import * 
 # from torchvision.models.resnet import model_zoo, model_urls
 from torchvision.models.resnet import model_urls
 from torch.utils import model_zoo

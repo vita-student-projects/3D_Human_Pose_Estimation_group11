@@ -1,8 +1,8 @@
 import numpy as np 
 
-from getActionID import getActionID
-from table import *
-from protocols import *
+from HEMlets.getActionID import getActionID
+from HEMlets.table import *
+from HEMlets.protocols import *
 
 
 avg_skeletonal_legth = np.array([132.94859077417854, 132.94882565107528, 233.47061306301964,

@@ -2,7 +2,7 @@ import sys
 import json
 sys.path.append('..')
 
-from inference.table import actions
+from HEMlets.table import actions
 
 def LoadSeqJsonDict(rootPath,subject):
     # load the mapping dict between the encoder seq and the video 

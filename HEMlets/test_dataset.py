@@ -13,7 +13,7 @@ import sys
 sys.path.append('..')
 import h5py  
 
-from table import *
+from HEMlets.table import *
 
 class H36M(tData.Dataset):
     def __init__(self,h5_path,video_id=1,subject=11,patch_width=256,patch_height=256,split = 'train'):
