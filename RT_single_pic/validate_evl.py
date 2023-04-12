@@ -269,7 +269,7 @@ if __name__ == '__main__':
     subject = argspar.sequence_id #11
 
 
-    #########################################################################Change here to load another image
+    #########################################################################Change here to load another image/video
     with h5py.File('../DLAV/test3.h5','r') as db:
         image = db['images'][:]
 
