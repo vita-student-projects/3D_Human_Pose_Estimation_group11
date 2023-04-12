@@ -59,7 +59,7 @@ def validate(model, val_loader, device,  subject=9,visualize = False, First = Fa
     seqList = [11]
     seqJsonDict = {}
     for seq in seqList:
-        seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = './data/',subject=seq)
+        seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
 
     # define action wise protocol dict
     action_wise_error_dict = {}

@@ -1,2 +1,5 @@
 ckpt/
 data/
+
+*.png
+*.mp4
