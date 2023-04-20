@@ -58,8 +58,7 @@ def validate(model, val_loader, device,  subject=9,visualize = False):
     seqList = [11]
     seqJsonDict = {}
     for seq in seqList:
-        seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = './data/',subject=seq)
-
+        seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
     # define action wise protocol dict
     action_wise_error_dict = {}
     for i in range(15):
@@ -271,6 +270,7 @@ if __name__ == '__main__':
     # define dataset and dataloader
     val_dataset = H36M(h5_path = tiny_dataset,video_id=video_id,subject=subject, split='val')
     val_loader = dataloader.val_loader(val_dataset, config, 0, 1)
+
 
     # start evaluation...
     print(validate(model, val_loader, device, subject=subject,visualize=visualize))

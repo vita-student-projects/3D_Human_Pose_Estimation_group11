@@ -1,5 +1,6 @@
 ckpt/
 data/
+DLAV/checkpoints/
 
 *.png
 *.mp4
