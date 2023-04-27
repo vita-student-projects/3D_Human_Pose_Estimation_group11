@@ -51,7 +51,7 @@ class H36M(tData.Dataset):
         
         idx = index % self.__len__()
         with h5py.File(h5_path,'r') as db:
-
+            print(db.keys())
             joints3dCam = db['joints3d_cam'][idx] # load the camera space 3d joint (32,3)
             joint3d_j18 = np.zeros((18,3),dtype=float)
             joint3d_j18[0:17,:] = joints3dCam[H36M_TO_J18,:] 
@@ -69,6 +69,7 @@ class H36M(tData.Dataset):
             cam_id[3] = self.video_id #int( ((h5_path.split('/')[-1]).split('.')[0]).split('_')[4])
 
 
+            
             joints[:,2] = joints[:,2] / 255.0 - 0.5
             joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
 
@@ -83,8 +84,10 @@ class H36M(tData.Dataset):
            
             image = torch.from_numpy(image).float()
 
+            #PAS SUR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            joint2d = db['joints2d_full'][idx]/1000*64
             
-            return image,image_filp,trans,cam_id,joint3d,joint3d_j18,np.zeros((3),dtype=float),'subject_{}'.format(self.subject)
+            return image,image_filp,trans,cam_id, joint2d,joint3d,joint3d_j18,np.zeros((3),dtype=float),'subject_{}'.format(self.subject)
 if __name__ == '__main__':
     d = H36M(split = 'val')
     for _ in range(100):

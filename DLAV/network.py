@@ -136,7 +136,7 @@ class Network(torch.nn.Module):
         #HEMlets branch
         fb_map = self.conv_FBI(feature)
         fb_map_feature = self.FBI_encoder(fb_map)
-        #Should add losses using this layer (fb_map_feature) (42 x 64 x 64) output of HEMlets
+        #Should add losses using this layer (fb_map_feature) (60 x 64 x 64) output of HEMlets
 
         #Fusion of two branches
         feature_cat = torch.cat([high_feature,fb_map_feature],1)
@@ -146,7 +146,7 @@ class Network(torch.nn.Module):
         # print('volume', volume.shape)
         joint3d = self.volume_reg(volume)
        
-        return joint3d
+        return joint3d, fb_map
 
 
 

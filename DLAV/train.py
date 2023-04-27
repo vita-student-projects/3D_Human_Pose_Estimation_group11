@@ -12,11 +12,13 @@ from dataset import H36M
 #from loss import MyLoss # replace with your own loss function
 from loss import MPJPE_Loss
 from HEMlets.config import config
-from HEMlets.network import Network
+from network import Network
 import HEMlets.dataloader as dataloader
 from HEMlets.model_opr import load_model
 from dataset import H36M
 from HEMlets.getActionID import LoadSeqJsonDict
+import matplotlib.pyplot as plt
+
 
 def main(args):
     # Set up dataset and data loader
@@ -44,19 +46,123 @@ def main(args):
         seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
     for epoch in range(args.epochs):
         #for batch_idx, (data, target) in enumerate(train_loader):
-        print("HEEERE",np.shape(enumerate(train_loader)))
+        #print("HEEERE",np.shape(enumerate(train_loader)))
         count = 0
         for (idx, data) in enumerate(train_loader):
-            #data, target = data.to(device), target.to(device)
-            print("SHAPE", np.shape(idx))
-            print("SHAPE", np.shape(data[0])) #1, 3, 256, 256
+            #data, target = data.to(device), target.to(device)            
+
+            image,image_flip, trans, camid, joint2d, joint3d, joint3d_camera,  root, name = data
+            #print(np.shape(image))
+            #print("MINMAX", torch.max(joint2d), torch.min(joint2d))
+            #Show which 2d joints are important
+            #print("JOINT", np.shape(joint2d), joint2d)
+            joints2d_list = np.array([0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27])
+
+            #Correspondance dictionary between joints -> layer:
+            correspondance = {0:0,1:1,2:2,3:3,6:4,7:4,8:5,12:6,13:7,14:8,15:9,17:10,18:11,19:12,25:13,26:14,27:15}
+            
+            #https://github.com/una-dinosauria/3d-pose-baseline/issues/185
+            """ H36M_NAMES = ['']*32
+            H36M_NAMES[0] = 'Hip'
+            H36M_NAMES[1] = 'RHip'
+            H36M_NAMES[2] = 'RKnee'
+            H36M_NAMES[3] = 'RFoot'
+            H36M_NAMES[6] = 'LHip'
+            H36M_NAMES[7] = 'LKnee'
+            H36M_NAMES[8] = 'LFoot'
+            H36M_NAMES[12] = 'Spine'
+            H36M_NAMES[13] = 'Thorax'              p,c 13, 15      13-17-18-19     13-25-26-27     0-13    0-1-2-3     0-6-7-8
+            H36M_NAMES[14] = 'Neck/Nose'
+            H36M_NAMES[15] = 'Head'                         Il y en a 14, c'est juste!
+            H36M_NAMES[17] = 'LShoulder'
+            H36M_NAMES[18] = 'LElbow'
+            H36M_NAMES[19] = 'LWrist'
+            H36M_NAMES[25] = 'RShoulder'
+            H36M_NAMES[26] = 'RElbow'
+            H36M_NAMES[27] = 'RWrist' """
+            
+            #https://github.com/una-dinosauria/3d-pose-baseline/issues/185
+            #plt.scatter(joint2d[0,joints2d_list,0], joint2d[0,joints2d_list,1])
+            #plt.show()
+
+            
+            optimizer.zero_grad()
+            output, middle_out = model(image)
+            #print(np.shape(middle_out))
+
+            #Normalization of the middle_output
+            """mean = torch.mean(middle_out, axis=(2,3), keepdims=True)
+            std = torch.std(middle_out, axis=(2,3), keepdims=True)
+            middle_out = torch.divide(torch.subtract(middle_out, mean),std)"""
+            #middle_out = torch.linalg.matrix_norm(middle_out, dim = (2,3))
+            min_middle = torch.min(middle_out)
+            max_middle = torch.max(middle_out)
+            middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
+
+            #Show 2djoints heatmap
+            array = middle_out[0,0,:,:].detach().numpy()
+            #print(np.max(array), np.min(array))
+            """plt.imshow(array,cmap='hot')
+            plt.colorbar()
+            plt.show()"""
             
 
-            image,image_flip, trans, camid, joint3d, joint3d_camera,  root, name = data
-            print("JOINT", joint3d)
-            optimizer.zero_grad()
-            output = model(image)
-            loss = criterion(output, joint3d)
+            #Create heatmap from 2D joints
+            """ for i in joints2d_list:
+                x = np.random.normal(joint2d[0,i,0], scale=1000, size=1000)
+                y = np.random.normal(joint2d[0,i,1], scale=0.001, size=1000)
+                
+                heatmap, xedges, yedges = np.histogram2d(x, y, bins=64)
+
+                # Plot the heatmap
+                extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+                if i == 0:
+                    plt.clf()
+                    plt.imshow(heatmap.T, origin='lower')
+                    plt.colorbar()
+                    plt.show()        """  
+
+            
+            from scipy.ndimage import gaussian_filter
+            #print(np.shape(joints2d_list))
+            heatmap = np.zeros((np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
+            temp = 0
+            for i in joints2d_list:
+                # Define the 2D point
+                point = np.array([joint2d[0,i,0], joint2d[0,i,1]])
+
+                # Create a 2D grid of coordinates around the point
+                x, y = np.meshgrid(np.arange(64), np.arange(64))
+                d = np.sqrt((x-point[0])**2 + (y-point[1])**2)
+
+                # Generate a heatmap with a Gaussian kernel
+                sigma = 0.001
+                #print(np.shape(heatmap[temp,:,:]))
+                heatmap[temp, :, :] = (gaussian_filter(d, sigma))
+                heatmap[temp, :, :] = np.subtract(np.max(heatmap[temp,:,:]), heatmap[temp,:,:])
+                temp += 1
+                
+                #Normalize the heatmap
+                #print("SHAPE",np.shape(heatmap))
+                #heatmap = np.linalg.norm(heatmap)
+                #print("NEWSHAPE", heatmap.shape)
+                """mean = np.mean(heatmap, axis=(1,2), keepdims=True)
+                std = np.std(heatmap, axis=(1,2), keepdims=True)
+                heatmap = np.divide(np.subtract(heatmap, mean), std)"""
+                max = np.max(heatmap, axis=(1,2), keepdims=True)
+                min = np.min(heatmap, axis=(1,2), keepdims=True)
+                #print(min.shape)
+                #heatmap = np.divide(np.subtract(heatmap, min), np.subtract(max, min))
+                heatmap = (heatmap-min)/(max-min)
+                # Plot the heatmap
+                """if i == 15:
+                    print(point)
+                    plt.imshow(heatmap[2,:,:], cmap='hot')
+                    plt.colorbar()
+                    plt.show()"""
+
+            #print("HEATMAP",np.shape(heatmap))
+            loss = criterion(output, joint3d, middle_out, joint2d[0,joints2d_list,:], heatmap, correspondance)#NEED TO ADD 2D JOINTS ALSO
             loss.backward()
             optimizer.step()
 
@@ -67,9 +173,10 @@ def main(args):
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     epoch, batch_idx * len(data), len(train_loader.dataset),
                     100. * batch_idx / len(train_loader), loss.item())) """
-            if count == 1:
+            #TO BREAK
+            """if count == 1:
                 break
-            count += 1
+            count += 1"""
 
         # Save model checkpoint
         if (epoch + 1) % args.save_interval == 0:
