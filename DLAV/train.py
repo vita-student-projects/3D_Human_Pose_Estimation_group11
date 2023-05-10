@@ -1,5 +1,10 @@
 import argparse
 import os
+import sys 
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 
 import numpy as np
 import torch
@@ -15,7 +20,6 @@ from HEMlets.config import config
 from network import Network
 import HEMlets.dataloader as dataloader
 from HEMlets.model_opr import load_model
-from dataset import H36M
 from HEMlets.getActionID import LoadSeqJsonDict
 import matplotlib.pyplot as plt
 
@@ -23,7 +27,7 @@ import matplotlib.pyplot as plt
 def main(args):
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
-    train_dataset = H36M(h5_path = tiny_dataset, split='val')
+    train_dataset = H36M()
     train_loader = dataloader.val_loader(train_dataset, config, 0, 1)
 
     #train_dataset = MyDataset(args.dataset_path, transform=transforms.ToTensor()) # replace with your own dataset class
@@ -51,7 +55,9 @@ def main(args):
         for (idx, data) in enumerate(train_loader):
             #data, target = data.to(device), target.to(device)            
 
-            image,image_flip, trans, camid, joint2d, joint3d, joint3d_camera,  root, name = data
+            joint2d, joint3d, path = data
+            print(path)
+            image = ...
             #print(np.shape(image))
             #print("MINMAX", torch.max(joint2d), torch.min(joint2d))
             #Show which 2d joints are important
