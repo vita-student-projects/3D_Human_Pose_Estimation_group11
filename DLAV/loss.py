@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-import HEMlets.config
+
 
 class MPJPE_Loss(nn.Module):
     def __init__(self):
@@ -111,4 +111,3 @@ class MPJPE_Loss(nn.Module):
             return np.stack((T_zeros, zero_polarity, T_zeros))
         elif r_zp_zc == -1:
             return np.stack((heatmap_c, heatmap_p, T_zeros))
-
