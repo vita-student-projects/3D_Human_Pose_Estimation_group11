@@ -1,6 +1,7 @@
 ckpt/
 data/
 DLAV/checkpoints/
+DLAV/__pycache__/
 
 *.png
 *.mp4

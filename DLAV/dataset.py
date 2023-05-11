@@ -51,7 +51,7 @@ class H36M(tData.Dataset):
         
         idx = index % self.__len__()
         with h5py.File(h5_path,'r') as db:
-            print(db.keys())
+            #print(db.keys())
             joints3dCam = db['joints3d_cam'][idx] # load the camera space 3d joint (32,3)
             joint3d_j18 = np.zeros((18,3),dtype=float)
             joint3d_j18[0:17,:] = joints3dCam[H36M_TO_J18,:] 

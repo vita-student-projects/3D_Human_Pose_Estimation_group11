@@ -13,7 +13,7 @@ from dataset import H36M
 from loss import MPJPE_Loss
 from HEMlets.config import config
 from network import Network
-import HEMlets.dataloader as dataloader
+import dataloader
 from HEMlets.model_opr import load_model
 from dataset import H36M
 from HEMlets.getActionID import LoadSeqJsonDict
@@ -21,10 +21,17 @@ import matplotlib.pyplot as plt
 
 
 def main(args):
+    #Files to save the losses
+    f = open("checkpoints/loss_train.txt", "w")
+    f.close()
+    f = open("checkpoints/loss_val.txt", "w")
+    f.close()
+
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
     train_dataset = H36M(h5_path = tiny_dataset, split='val')
-    train_loader = dataloader.val_loader(train_dataset, config, 0, 1)
+
+    train, validation, test = dataloader.val_loader(train_dataset, config, args.data_ratio, args.validation_ratio, args.test_ratio, args.batch_size)
 
     #train_dataset = MyDataset(args.dataset_path, transform=transforms.ToTensor()) # replace with your own dataset class
     #train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
@@ -44,18 +51,21 @@ def main(args):
     seqJsonDict = {}
     for seq in seqList:
         seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
+    
     for epoch in range(args.epochs):
         #for batch_idx, (data, target) in enumerate(train_loader):
         #print("HEEERE",np.shape(enumerate(train_loader)))
         count = 0
-        for (idx, data) in enumerate(train_loader):
+        loss_train = 0
+        count_loss = 0
+        for (idx, data) in enumerate(train):
             #data, target = data.to(device), target.to(device)            
 
             image,image_flip, trans, camid, joint2d, joint3d, joint3d_camera,  root, name = data
             #print(np.shape(image))
             #print("MINMAX", torch.max(joint2d), torch.min(joint2d))
             #Show which 2d joints are important
-            #print("JOINT", np.shape(joint2d), joint2d)
+            #print("JOINT", np.shape(joint2d))
             joints2d_list = np.array([0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27])
 
             #Correspondance dictionary between joints -> layer:
@@ -125,44 +135,45 @@ def main(args):
             
             from scipy.ndimage import gaussian_filter
             #print(np.shape(joints2d_list))
-            heatmap = np.zeros((np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
-            temp = 0
-            for i in joints2d_list:
-                # Define the 2D point
-                point = np.array([joint2d[0,i,0], joint2d[0,i,1]])
+            heatmap = np.zeros((np.shape(joint2d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
+            for j in range(np.shape(joint2d)[0]):
+                temp = 0
+                for i in joints2d_list:
+                    # Define the 2D point
+                    point = np.array([joint2d[j,i,0], joint2d[j,i,1]])
 
-                # Create a 2D grid of coordinates around the point
-                x, y = np.meshgrid(np.arange(64), np.arange(64))
-                d = np.sqrt((x-point[0])**2 + (y-point[1])**2)
+                    # Create a 2D grid of coordinates around the point
+                    x, y = np.meshgrid(np.arange(64), np.arange(64))
+                    d = np.sqrt((x-point[0])**2 + (y-point[1])**2)
 
-                # Generate a heatmap with a Gaussian kernel
-                sigma = 0.001
-                #print(np.shape(heatmap[temp,:,:]))
-                heatmap[temp, :, :] = (gaussian_filter(d, sigma))
-                heatmap[temp, :, :] = np.subtract(np.max(heatmap[temp,:,:]), heatmap[temp,:,:])
-                temp += 1
-                
-                #Normalize the heatmap
-                #print("SHAPE",np.shape(heatmap))
-                #heatmap = np.linalg.norm(heatmap)
-                #print("NEWSHAPE", heatmap.shape)
-                """mean = np.mean(heatmap, axis=(1,2), keepdims=True)
-                std = np.std(heatmap, axis=(1,2), keepdims=True)
-                heatmap = np.divide(np.subtract(heatmap, mean), std)"""
-                max = np.max(heatmap, axis=(1,2), keepdims=True)
-                min = np.min(heatmap, axis=(1,2), keepdims=True)
-                #print(min.shape)
-                #heatmap = np.divide(np.subtract(heatmap, min), np.subtract(max, min))
-                heatmap = (heatmap-min)/(max-min)
-                # Plot the heatmap
-                """if i == 15:
-                    print(point)
-                    plt.imshow(heatmap[2,:,:], cmap='hot')
-                    plt.colorbar()
-                    plt.show()"""
+                    # Generate a heatmap with a Gaussian kernel
+                    sigma = 0.001
+                    #print(np.shape(heatmap[temp,:,:]))
+                    heatmap[j, temp, :, :] = (gaussian_filter(d, sigma))
+                    heatmap[j, temp, :, :] = np.subtract(np.max(heatmap[j,temp,:,:]), heatmap[j,temp,:,:])
+                    temp += 1
+                    
+            #Normalize the heatmap
+            #print("SHAPE",np.shape(heatmap))
+            #heatmap = np.linalg.norm(heatmap)
+            #print("NEWSHAPE", heatmap.shape)
+            """mean = np.mean(heatmap, axis=(1,2), keepdims=True)
+            std = np.std(heatmap, axis=(1,2), keepdims=True)
+            heatmap = np.divide(np.subtract(heatmap, mean), std)"""
+            max = np.max(heatmap, axis=(2,3), keepdims=True)
+            min = np.min(heatmap, axis=(2,3), keepdims=True)
+            #print(min.shape, heatmap.shape)
+            #heatmap = np.divide(np.subtract(heatmap, min), np.subtract(max, min))
+            heatmap = (heatmap-min)/(max-min)
+            # Plot the heatmap
+            """if i == 15:
+                print(point)
+                plt.imshow(heatmap[2,:,:], cmap='hot')
+                plt.colorbar()
+                plt.show()"""
 
             #print("HEATMAP",np.shape(heatmap))
-            loss = criterion(output, joint3d, middle_out, joint2d[0,joints2d_list,:], heatmap, correspondance)#NEED TO ADD 2D JOINTS ALSO
+            loss = criterion(output, joint3d, middle_out, joint2d[:,joints2d_list,:], heatmap, correspondance)#NEED TO ADD 2D JOINTS ALSO
             loss.backward()
             optimizer.step()
 
@@ -177,11 +188,68 @@ def main(args):
             """if count == 1:
                 break
             count += 1"""
+            count_loss += 1
+            loss_train += loss.item()
+        for (idx, data) in enumerate(validation):
+            image,image_flip, trans, camid, joint2d, joint3d, joint3d_camera,  root, name = data
+            #print(np.shape(image))
+            val_output, middle_out = model(image)
+            heatmap = np.zeros((np.shape(joint2d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
+            min_middle = torch.min(middle_out)
+            max_middle = torch.max(middle_out)
+            middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
+            for j in range(np.shape(joint2d)[0]):
+                temp = 0
+                for i in joints2d_list:
+                    # Define the 2D point
+                    point = np.array([joint2d[j,i,0], joint2d[j,i,1]])
+
+                    # Create a 2D grid of coordinates around the point
+                    x, y = np.meshgrid(np.arange(64), np.arange(64))
+                    d = np.sqrt((x-point[0])**2 + (y-point[1])**2)
+
+                    # Generate a heatmap with a Gaussian kernel
+                    sigma = 0.001
+                    #print(np.shape(heatmap[temp,:,:]))
+                    heatmap[j, temp, :, :] = (gaussian_filter(d, sigma))
+                    heatmap[j, temp, :, :] = np.subtract(np.max(heatmap[j,temp,:,:]), heatmap[j,temp,:,:])
+                    temp += 1
+                    
+            #Normalize the heatmap
+            #print("SHAPE",np.shape(heatmap))
+            #heatmap = np.linalg.norm(heatmap)
+            #print("NEWSHAPE", heatmap.shape)
+            """mean = np.mean(heatmap, axis=(1,2), keepdims=True)
+            std = np.std(heatmap, axis=(1,2), keepdims=True)
+            heatmap = np.divide(np.subtract(heatmap, mean), std)"""
+            max = np.max(heatmap, axis=(2,3), keepdims=True)
+            min = np.min(heatmap, axis=(2,3), keepdims=True)
+            #print(min.shape, heatmap.shape)
+            #heatmap = np.divide(np.subtract(heatmap, min), np.subtract(max, min))
+            heatmap = (heatmap-min)/(max-min)
+            # Plot the heatmap
+            """if i == 15:
+                print(point)
+                plt.imshow(heatmap[2,:,:], cmap='hot')
+                plt.colorbar()
+                plt.show()"""
+            loss_val = criterion(val_output, joint3d, middle_out, joint2d[:,joints2d_list,:], heatmap, correspondance)
+            print("LOSSSSSSSSVAAAL",loss_val.item())
 
         # Save model checkpoint
         if (epoch + 1) % args.save_interval == 0:
             checkpoint_dir = os.path.join(args.checkpoint_dir, 'epoch_{}.pt'.format(epoch))
             torch.save(model.state_dict(), checkpoint_dir)
+
+            loss_train = loss_train/count_loss
+            print("Average loss on epoch",loss_train)
+            f = open("checkpoints/loss_train.txt", "a")
+            f.write(repr(epoch) + ", " + repr(loss_train) + "\n")
+            f.close()
+
+            f = open("checkpoints/loss_val.txt", "a")
+            f.write(repr(epoch) + ", " + repr(loss_val.item()) + "\n")
+            f.close()
 
       
 
@@ -203,6 +271,12 @@ if __name__ == '__main__':
                         help='how many epochs to wait before saving model checkpoint (default: 10)')
     parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints',
                         help='directory to save model checkpoints (default: ./checkpoints)')
+    parser.add_argument('--data_ratio', type=float, default=0.1,
+                        help='Percentage of data taken')
+    parser.add_argument('--test_ratio', type=float, default=0.3,
+                        help='percentage of data for testing')
+    parser.add_argument('--validation_ratio', type=float, default=0.1,
+                        help='Percentage of data for validation')
     args = parser.parse_args()
 
     main(args)

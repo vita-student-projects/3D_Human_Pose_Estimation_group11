@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 
 
 def main(args):
+    
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
     train_dataset = H36M()
