@@ -51,6 +51,21 @@ class H36M(tData.Dataset):
         
         idx = index % self.__len__()
         with h5py.File(h5_path,'r') as db:
+            joints = db['pos3D'][idx]
+            image = db['images'][idx]
+            joints[:,2] = joints[:,2] / 255.0 - 0.5
+            joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
+            joint3d = torch.from_numpy(joints).float()
+            image = self.imgNormalize(image)
+            image = np.transpose(image,(2,0,1))
+            image = torch.from_numpy(image).float()
+            return image, joint3d
+        
+        # index = 555
+        h5_path =  self.h5_path
+        
+        idx = index % self.__len__()
+        with h5py.File(h5_path,'r') as db:
             #print(db.keys())
             joints3dCam = db['joints3d_cam'][idx] # load the camera space 3d joint (32,3)
             joint3d_j18 = np.zeros((18,3),dtype=float)
@@ -60,7 +75,7 @@ class H36M(tData.Dataset):
 
             img = db['images'][idx]
             joints = db['joints'][idx]
-            
+            print(np.shape(img), np.shape(joints))
             trans = db['trans'][idx]
             camid = db['camid'][idx]
 

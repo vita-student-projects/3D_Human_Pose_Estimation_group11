@@ -3,6 +3,11 @@ data/
 DLAV/checkpoints/
 DLAV/__pycache__/
 
+
 *.png
 *.mp4
 *.h5
+csv.npy
+jpg.npy
+DATA_TEST/
+

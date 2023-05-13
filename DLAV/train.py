@@ -29,7 +29,7 @@ def main(args):
 
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
-    train_dataset = H36M(h5_path = tiny_dataset, split='val')
+    train_dataset = H36M(args.dataset_path, split='val')
 
     train, validation, test = dataloader.val_loader(train_dataset, config, args.data_ratio, args.validation_ratio, args.test_ratio, args.batch_size)
 
@@ -61,7 +61,8 @@ def main(args):
         for (idx, data) in enumerate(train):
             #data, target = data.to(device), target.to(device)            
 
-            image,image_flip, trans, camid, joint2d, joint3d, joint3d_camera,  root, name = data
+            image,joint3d = data
+            print(np.shape(image), np.shape(joint3d))
             #print(np.shape(image))
             #print("MINMAX", torch.max(joint2d), torch.min(joint2d))
             #Show which 2d joints are important
@@ -95,7 +96,7 @@ def main(args):
             #plt.scatter(joint2d[0,joints2d_list,0], joint2d[0,joints2d_list,1])
             #plt.show()
 
-            
+            print("IMAGES", np.shape(image))
             optimizer.zero_grad()
             output, middle_out = model(image)
             #print(np.shape(middle_out))
@@ -135,12 +136,12 @@ def main(args):
             
             from scipy.ndimage import gaussian_filter
             #print(np.shape(joints2d_list))
-            heatmap = np.zeros((np.shape(joint2d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
-            for j in range(np.shape(joint2d)[0]):
+            heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
+            for j in range(np.shape(joint3d)[0]):
                 temp = 0
-                for i in joints2d_list:
+                for i in range(np.shape(joint3d)[1]):
                     # Define the 2D point
-                    point = np.array([joint2d[j,i,0], joint2d[j,i,1]])
+                    point = np.array([joint3d[j,i,0], joint3d[j,i,1]])
 
                     # Create a 2D grid of coordinates around the point
                     x, y = np.meshgrid(np.arange(64), np.arange(64))
@@ -152,7 +153,7 @@ def main(args):
                     heatmap[j, temp, :, :] = (gaussian_filter(d, sigma))
                     heatmap[j, temp, :, :] = np.subtract(np.max(heatmap[j,temp,:,:]), heatmap[j,temp,:,:])
                     temp += 1
-                    
+            
             #Normalize the heatmap
             #print("SHAPE",np.shape(heatmap))
             #heatmap = np.linalg.norm(heatmap)
@@ -173,7 +174,8 @@ def main(args):
                 plt.show()"""
 
             #print("HEATMAP",np.shape(heatmap))
-            loss = criterion(output, joint3d, middle_out, joint2d[:,joints2d_list,:], heatmap, correspondance)#NEED TO ADD 2D JOINTS ALSO
+            print("DDDDDDDDDDDDDDDDDDDDDDDDD",np.shape(joint3d))
+            loss = criterion(output, joint3d, middle_out, heatmap)
             loss.backward()
             optimizer.step()
 
@@ -191,18 +193,18 @@ def main(args):
             count_loss += 1
             loss_train += loss.item()
         for (idx, data) in enumerate(validation):
-            image,image_flip, trans, camid, joint2d, joint3d, joint3d_camera,  root, name = data
+            image,joint3d = data
             #print(np.shape(image))
             val_output, middle_out = model(image)
-            heatmap = np.zeros((np.shape(joint2d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
+            heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
             min_middle = torch.min(middle_out)
             max_middle = torch.max(middle_out)
             middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
-            for j in range(np.shape(joint2d)[0]):
+            for j in range(np.shape(joint3d)[0]):
                 temp = 0
-                for i in joints2d_list:
+                for i in range(np.shape(joint3d)[1]):
                     # Define the 2D point
-                    point = np.array([joint2d[j,i,0], joint2d[j,i,1]])
+                    point = np.array([joint3d[j,i,0], joint3d[j,i,1]])
 
                     # Create a 2D grid of coordinates around the point
                     x, y = np.meshgrid(np.arange(64), np.arange(64))
@@ -233,7 +235,7 @@ def main(args):
                 plt.imshow(heatmap[2,:,:], cmap='hot')
                 plt.colorbar()
                 plt.show()"""
-            loss_val = criterion(val_output, joint3d, middle_out, joint2d[:,joints2d_list,:], heatmap, correspondance)
+            loss_val = criterion(val_output, joint3d, middle_out, heatmap)
             print("LOSSSSSSSSVAAAL",loss_val.item())
 
         # Save model checkpoint

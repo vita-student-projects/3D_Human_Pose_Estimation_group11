@@ -19,18 +19,24 @@ from dataset_scitas import H36M
 from loss import MPJPE_Loss
 from HEMlets.config import config
 from network import Network
-import HEMlets.dataloader as dataloader
+import dataloader as dataloader
 from HEMlets.model_opr import load_model
 from HEMlets.getActionID import LoadSeqJsonDict
 import matplotlib.pyplot as plt
 
 
 def main(args):
-    
+    #Files to save the losses
+    f = open("checkpoints/loss_train.txt", "w")
+    f.close()
+    f = open("checkpoints/loss_val.txt", "w")
+    f.close()
+
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
-    train_dataset = H36M()
-    train_loader = dataloader.val_loader(train_dataset, config, 0, 1)
+    train_dataset = H36M(h5_path = tiny_dataset, split='val')
+
+    train, validation, test = dataloader.val_loader(train_dataset, config, args.data_ratio, args.validation_ratio, args.test_ratio, args.batch_size)
 
     #train_dataset = MyDataset(args.dataset_path, transform=transforms.ToTensor()) # replace with your own dataset class
     #train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
@@ -57,30 +63,9 @@ def main(args):
         for (idx, data) in enumerate(train_loader):
             #data, target = data.to(device), target.to(device)            
 
-            joint2d, joint3d, path_frame = data
-            print(path_frame)
+            image, joint3d = data
+            print(np.shape(image), np.shape(joint3d))
 
-            # Open the video file
-            video = cv2.VideoCapture(path_frame[0])
-            
-            # Set the frame number to the desired frame
-            video.set(cv2.CAP_PROP_POS_FRAMES, path_frame[1])
-            
-            # Read the frame
-            ret, image = video.read()
-            
-            # Check if the frame was read successfully
-            if not ret:
-                print("Error reading frame")
-                return None
-            
-            # Release the video object
-            video.release()
-        
-            #print(np.shape(image))
-            #print("MINMAX", torch.max(joint2d), torch.min(joint2d))
-            #Show which 2d joints are important
-            #print("JOINT", np.shape(joint2d), joint2d)
             joints2d_list = np.array([0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27])
 
             #Correspondance dictionary between joints -> layer:
@@ -152,7 +137,7 @@ def main(args):
             #print(np.shape(joints2d_list))
             heatmap = np.zeros((np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
             temp = 0
-            for i in joints2d_list:
+            for i in range(np.shape(joints2d_list)):
                 # Define the 2D point
                 point = np.array([joint2d[0,i,0], joint2d[0,i,1]])
 
@@ -228,6 +213,12 @@ if __name__ == '__main__':
                         help='how many epochs to wait before saving model checkpoint (default: 10)')
     parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints',
                         help='directory to save model checkpoints (default: ./checkpoints)')
+    parser.add_argument('--data_ratio', type=float, default=0.1,
+                        help='Percentage of data taken')
+    parser.add_argument('--test_ratio', type=float, default=0.3,
+                        help='percentage of data for testing')
+    parser.add_argument('--validation_ratio', type=float, default=0.1,
+                        help='Percentage of data for validation')
     args = parser.parse_args()
 
     main(args)

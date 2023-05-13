@@ -2,14 +2,9 @@ import math
 
 import torch
 
-from sklearn import shuffle
-
-
-
 def val_loader(dataset, config, data_ratio, validation_ratio, test_ratio, batch_size):
     num_data = len(dataset)
     print(dataset)
-    dataset = shuffle(dataset)
 
     data_length = int(data_ratio * num_data)
     print("data_length",data_length)

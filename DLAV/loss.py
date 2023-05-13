@@ -8,7 +8,7 @@ class MPJPE_Loss(nn.Module):
     def __init__(self):
         super(MPJPE_Loss, self).__init__()
 
-    def forward(self, pred, joint3d, middle_out, joint2d, heatmap, correspondance):
+    def forward(self, pred, joint3d, middle_out, heatmap):
         """
         Compute Mean Per Joint Position Error (MPJPE) between predicted and ground-truth 3D joint positions.
 
@@ -22,7 +22,7 @@ class MPJPE_Loss(nn.Module):
         L2D = 0
         LHEM = 0
         l3D = 0
-
+        print("JOINT3D",np.shape(joint3d))
         #assert pred.shape == joint3d.shape, "Predicted and target shapes do not match"
 
         num_joints = pred.shape[1]
@@ -42,7 +42,8 @@ class MPJPE_Loss(nn.Module):
         if np.shape(joint3d)[2] == 2:
             l3D = torch.mean(torch.abs(joint3d[:,:,0] - pred[:,:,0]) + torch.abs(joint3d[:,:,1] - pred[:,:,1]))
         elif np.shape(joint3d)[2] == 3:
-            l3D = torch.mean(torch.abs(joint3d - pred))
+            print("HEHEHE",np.shape(pred[:,:17,:]))
+            l3D = torch.mean(torch.abs(joint3d - pred[:,:17,:]))
            
 
         #L2D
@@ -67,6 +68,8 @@ class MPJPE_Loss(nn.Module):
         LHEM = np.zeros(np.shape(heatmap)[0])
         #List of [[parent, child]]
         parent = [[13, 15], [13, 17], [13, 18], [13, 19], [13, 25], [13, 26], [13, 27], [0, 13], [0, 1], [0, 2], [0, 3], [0, 6], [0, 7], [0, 8]]
+        parent = [[0,1], [1,2],[2,3],[0,4],[4,5],[5,6],[0,8],[8,14],[14,15],[15,16],[8,11],[11,12],[12,13],[8,10]]
+        print(np.shape(heatmap))
         for j in range(np.shape(heatmap)[0]):
             for i in range(np.shape(parent)[0]):
                 #print("CORRESPONDANCE : First is z, 9 ",correspondance.get(parent[i][0]), correspondance.get(parent[i][1]))
@@ -74,12 +77,12 @@ class MPJPE_Loss(nn.Module):
                 #Parent and child
                 p = parent[i][0]
                 c = parent[i][1]
-                heatmap_p = heatmap[j,correspondance.get(p)]
-                heatmap_c = heatmap[j,correspondance.get(c)]
+                heatmap_p = heatmap[j,(p)]
+                heatmap_c = heatmap[j,(c)]
 
                 #joint 17 is not used for H3.6m
-                zp = joint3d[j, correspondance.get(p), 2]
-                zc = joint3d[j, correspondance.get(c), 2]
+                zp = joint3d[j, (p), 2]
+                zc = joint3d[j, (c), 2]
                 T_GT = self.heatmap_triplets(zp, zc, heatmap_p, heatmap_c)
 
                 #To be added after GT is good
