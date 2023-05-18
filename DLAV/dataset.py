@@ -12,7 +12,7 @@ sys.path.append('..')
 import torch
 import torch.utils.data as tData
 import glob
-
+import matplotlib.pyplot as plt
 import random
 import json 
 import sys 
@@ -53,12 +53,18 @@ class H36M(tData.Dataset):
         with h5py.File(h5_path,'r') as db:
             joints = db['pos3D'][idx]
             image = db['images'][idx]
-            joints[:,2] = joints[:,2] / 255.0 - 0.5
-            joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
+            #print("JOINTS", joints)
+            joints = joints/1000 #SEEMS CORRECT
+            # joints[:,2] = joints[:,2] / 255.0 - 0.5
+            # joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
             joint3d = torch.from_numpy(joints).float()
-            image = self.imgNormalize(image)
-            image = np.transpose(image,(2,0,1))
+            image = (image).astype(float)
+            #print(type(image[0,0,0]))
+            #print(np.max(image))
+            #image = self.imgNormalize(image)
+            image = np.transpose(image,(2,1,0))
             image = torch.from_numpy(image).float()
+
             return image, joint3d
         
         # index = 555

@@ -63,7 +63,7 @@ class H36M(tData.Dataset):
             cam_id[:3] = camid
             cam_id[3] = self.video_id #int( ((h5_path.split('/')[-1]).split('.')[0]).split('_')[4])
 
-
+            print(joints)
             joints[:,2] = joints[:,2] / 255.0 - 0.5
             joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
 

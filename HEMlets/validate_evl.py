@@ -76,7 +76,7 @@ def validate(model, val_loader, device,  subject=9,visualize = False):
             break
         
         image,image_flip, trans, camid, joint3d, joint3d_camera,  root, name = data
-
+        print(joint3d)
         image = image.to(device)
         # for flip test to improve the accuracy of 3d pose prediction 
         image_flip = image_flip.to(device)

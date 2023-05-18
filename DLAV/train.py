@@ -18,8 +18,54 @@ from HEMlets.model_opr import load_model
 from dataset import H36M
 from HEMlets.getActionID import LoadSeqJsonDict
 import matplotlib.pyplot as plt
+import cv2
 
+def images_crop(images):
+    net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
+    model_crop = cv2.dnn_DetectionModel(net)
+    #Resize into a small square (320,320) to process a fast analysis
+    #Scale because the dnn go from 0 to 1 and the pixel value from 0 to 255
+    model_crop.setInputParams(size=(320,320), scale=1)
 
+    classes = []
+    with open("../ckpt/classes.txt", "r") as file_object:
+        for class_name in file_object.readlines():
+            #To get the good shape of inputs
+            class_name = class_name.strip()
+            classes.append(class_name)
+
+    res_cropped = np.zeros(np.shape(images))
+    for i in range(np.shape(images)[0]):
+        print(np.shape(np.transpose(images[i])))
+        print(type(np.array(images)))
+        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(np.array(images[i,:,:,:])))
+        # plt.imshow(np.transpose(images[i,:,:,:]))
+        # plt.show()
+        print((class_ids, score, bound_boxes))
+        for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
+            x, y, w, h = bound_boxes
+            #print(x, y, h, w)
+            class_name=classes[int(class_ids)]
+            
+            if class_name=="person":
+                print("TRU", np.shape(images))
+                #cv2.putText(image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
+                #cv2.rectangle(image, (x,y), (x+w,y+h), (200, 0, 50), 3)
+                #cv2.imshow("Frame", image)
+                #cv2.waitKey(0)
+                #print(np.shape(image))
+                add = 5
+                image = np.copy(images[i])
+                cropped = np.transpose(image[:,x-add:x+w+add, y-add:y+h+add])
+                res_cropped[i,:,:,:] = np.transpose(cv2.resize(cropped, (256,256)))
+                # cv2.imshow("NEW", np.transpose(res_cropped[i]))
+                # cv2.waitKey(0)
+                print(np.shape(res_cropped))
+                break
+    print("ICIIIIIIIIIIIIIIIIIIIIIIII",np.shape(res_cropped))
+    # plt.imshow(np.transpose(res_cropped[1]))
+    # plt.show()
+    return res_cropped
 def main(args):
     #Files to save the losses
     f = open("checkpoints/loss_train.txt", "w")
@@ -53,18 +99,21 @@ def main(args):
         seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
     
     for epoch in range(args.epochs):
+        
+
+
         #for batch_idx, (data, target) in enumerate(train_loader):
         #print("HEEERE",np.shape(enumerate(train_loader)))
         count = 0
         loss_train = 0
         count_loss = 0
         for (idx, data) in enumerate(train):
-            #data, target = data.to(device), target.to(device)            
 
-            image,joint3d = data
-            print(np.shape(image), np.shape(joint3d))
-            #print(np.shape(image))
-            #print("MINMAX", torch.max(joint2d), torch.min(joint2d))
+            #data, target = data.to(device), target.to(device)            
+            image_b,joint3d = data
+            print(np.shape(image_b), type(image_b))
+            image = torch.from_numpy(images_crop(image_b)).float()
+            print(type(image[0,0,0,0]))
             #Show which 2d joints are important
             #print("JOINT", np.shape(joint2d))
             joints2d_list = np.array([0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27])
@@ -99,6 +148,50 @@ def main(args):
             print("IMAGES", np.shape(image))
             optimizer.zero_grad()
             output, middle_out = model(image)
+            print(np.shape(image[0]), np.shape(np.transpose(image[0])), type([image[0,0,0,0]]))
+            # Extracting x, y, and z coordinates
+
+
+            # Show the plot
+            if epoch == 90:
+                print(np.shape(np.transpose(image[0])))
+                x1 = output[0,:, 2].detach().numpy()
+                y1 = output[0,:, 0].detach().numpy()
+                z1 = -output[0,:, 1].detach().numpy()
+
+                # Creating the 3D plot
+                fig = plt.figure()
+                ax1 = fig.add_subplot(111, projection='3d')
+
+                # Scatter plot of the data points
+                
+
+                # Set labels for the axes
+                ax1.set_xlabel('X')
+                ax1.set_ylabel('Y')
+                ax1.set_zlabel('Z')
+
+                # Show the plot
+                
+                x = joint3d[0,:, 2]
+                y = joint3d[0,:, 0]
+                z = -joint3d[0,:, 1]
+
+                # Creating the 3D plot
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+
+                # Scatter plot of the data points
+                
+
+                # Set labels for the axes
+                ax.set_xlabel('X')
+                ax.set_ylabel('Y')
+                ax.set_zlabel('Z')
+                ax1.scatter(x1, y1, z1, c='b', marker='o')
+                ax.scatter(x, y, z, c='b', marker='o')
+                #plt.imshow((np.transpose(image[0])))
+                plt.show()
             #print(np.shape(middle_out))
 
             #Normalization of the middle_output
@@ -106,6 +199,7 @@ def main(args):
             std = torch.std(middle_out, axis=(2,3), keepdims=True)
             middle_out = torch.divide(torch.subtract(middle_out, mean),std)"""
             #middle_out = torch.linalg.matrix_norm(middle_out, dim = (2,3))
+
             min_middle = torch.min(middle_out)
             max_middle = torch.max(middle_out)
             middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
@@ -176,6 +270,7 @@ def main(args):
             #print("HEATMAP",np.shape(heatmap))
             print("DDDDDDDDDDDDDDDDDDDDDDDDD",np.shape(joint3d))
             loss = criterion(output, joint3d, middle_out, heatmap)
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
@@ -193,10 +288,11 @@ def main(args):
             count_loss += 1
             loss_train += loss.item()
         for (idx, data) in enumerate(validation):
-            image,joint3d = data
+            image_bv,joint3d = data
+            image = torch.from_numpy(images_crop(image_bv)).float()
             #print(np.shape(image))
             val_output, middle_out = model(image)
-            heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joints2d_list)[0], np.shape(middle_out)[2],np.shape(middle_out)[3]))
+            heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joint3d)[1], np.shape(middle_out)[2],np.shape(middle_out)[3]))
             min_middle = torch.min(middle_out)
             max_middle = torch.max(middle_out)
             middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
@@ -237,7 +333,11 @@ def main(args):
                 plt.show()"""
             loss_val = criterion(val_output, joint3d, middle_out, heatmap)
             print("LOSSSSSSSSVAAAL",loss_val.item())
-
+        # Getting all memory using os.popen()
+        total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+        
+        # Memory usage
+        print("RAM memory percent used:", round((used_memory/total_memory) * 100, 2), total_memory)
         # Save model checkpoint
         if (epoch + 1) % args.save_interval == 0:
             checkpoint_dir = os.path.join(args.checkpoint_dir, 'epoch_{}.pt'.format(epoch))
@@ -252,6 +352,45 @@ def main(args):
             f = open("checkpoints/loss_val.txt", "a")
             f.write(repr(epoch) + ", " + repr(loss_val.item()) + "\n")
             f.close()
+            print(np.shape(np.transpose(image[0])))
+        
+            x1 = output[0,:, 2].detach().numpy()
+            y1 = output[0,:, 0].detach().numpy()
+            z1 = -output[0,:, 1].detach().numpy()
+
+            # Creating the 3D plot
+            fig = plt.figure()
+            ax1 = fig.add_subplot(111, projection='3d')
+
+            # Scatter plot of the data points
+            
+
+            # Set labels for the axes
+            ax1.set_xlabel('X')
+            ax1.set_ylabel('Y')
+            ax1.set_zlabel('Z')
+
+            # Show the plot
+            
+            x = joint3d[0,:, 2]
+            y = joint3d[0,:, 0]
+            z = -joint3d[0,:, 1]
+
+            # Creating the 3D plot
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+
+            # Scatter plot of the data points
+            
+
+            # Set labels for the axes
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+            ax1.scatter(x1, y1, z1, c='b', marker='o')
+            ax.scatter(x, y, z, c='b', marker='o')
+            #plt.imshow((np.transpose(image[0])))
+            plt.show()
 
       
 

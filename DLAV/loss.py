@@ -42,9 +42,18 @@ class MPJPE_Loss(nn.Module):
         if np.shape(joint3d)[2] == 2:
             l3D = torch.mean(torch.abs(joint3d[:,:,0] - pred[:,:,0]) + torch.abs(joint3d[:,:,1] - pred[:,:,1]))
         elif np.shape(joint3d)[2] == 3:
-            print("HEHEHE",np.shape(pred[:,:17,:]))
-            l3D = torch.mean(torch.abs(joint3d - pred[:,:17,:]))
-           
+            print("HEHEHE",np.shape(pred[:,:17,:]), np.shape(pred), np.shape(joint3d))
+            print("ICIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", np.shape(torch.sum(torch.abs(joint3d - pred[:,:17,:]), axis = (2))))
+            print(torch.sum(torch.mean(torch.abs(joint3d - pred[:,:17,:]), axis = (0,2))))
+            l3D = torch.sum(torch.mean(torch.abs(joint3d - pred[:,:17,:]), axis = (0,2)))
+            
+            #CHAT
+            distance = torch.norm(pred[:,:17,:] - joint3d, dim=-1)
+            l3D = torch.mean(torch.mean(distance, dim=1), dim=0)
+
+
+            l3D = torch.sum(torch.mean(torch.sum(torch.abs(joint3d - pred[:,:17,:]), axis = (2)), axis = 0))
+            print(np.shape(l3D))
 
         #L2D
         #If only Human3.6M, stops at 17
@@ -54,7 +63,8 @@ class MPJPE_Loss(nn.Module):
         #print(H_lay.shape)
 
         diff = torch.sub(H_lay, torch.from_numpy(heatmap)).detach().numpy()
-        L2D = np.mean(np.linalg.norm(diff, axis=(2,3))**2)
+        print("HAHAHA", np.shape(np.linalg.norm(diff, axis=(2,3))**2), np.mean(np.sum(np.linalg.norm(diff, axis=(2,3))**2, axis =1)))
+        L2D = np.mean(np.sum(np.linalg.norm(diff, axis=(2,3))**2, axis =1))
         """ diff = torch.sqrt(torch.sum(diff ** 2, dim=2))
         loss = torch.sum(diff) """
         print("L2D",L2D)
@@ -90,12 +100,12 @@ class MPJPE_Loss(nn.Module):
                 #Lambda_H36m[17] = np.zeros(np.shape(T_GT)[0])
                 T_pred = middle_out[j, 17 + 3*i:17 + 3*(i+1), :, :].detach().numpy()
                 LHEM[j] += np.sum(np.linalg.norm(np.multiply((T_GT - T_pred), Lambda_H36m), axis=(1,2))) ** 2
-
+        print(np.shape(LHEM))
         ##############################################################
-        Lint = np.mean(LHEM)/200 + L2D
-        loss = l3D + 0.0000625*Lint
-        print("LHEM", np.mean(LHEM)/200)
-        print("Lint, L3D, loss", 0.0000625*Lint, l3D.item(), loss.item())
+        Lint = np.mean(LHEM)/20 + L2D
+        loss = l3D + 0.0*Lint
+        print("LHEM", np.mean(LHEM)/20)
+        print("Lint, L3D, loss", 0.005*Lint, l3D.item(), loss.item())
 
         return loss
     
