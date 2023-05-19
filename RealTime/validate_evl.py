@@ -18,6 +18,78 @@ import imageio_ffmpeg
 import argparse
 
 import time 
+detected = False
+def images_crop(images):
+    global detected
+    print("JBNHJBDABVDAVHJVD", np.shape(images))
+    original_y  = np.shape(images)[0]
+    original_x = np.shape(images)[1]
+    net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
+    model_crop = cv2.dnn_DetectionModel(net)
+    #Resize into a small square (320,320) to process a fast analysis
+    #Scale because the dnn go from 0 to 1 and the pixel value from 0 to 255
+    size_img = 500
+    model_crop.setInputParams(size=(320,320), scale=1/255)
+
+    classes = []
+    with open("../ckpt/classes.txt", "r") as file_object:
+        for class_name in file_object.readlines():
+            #To get the good shape of inputs
+            class_name = class_name.strip()
+            classes.append(class_name)
+
+    res_cropped = np.zeros(np.shape(images))
+    print(np.shape(images))
+    images = (cv2.resize(images, (size_img,size_img)))
+    print(np.shape(images), type(images), np.max(images), np.min(images))
+    (class_ids, score, bound_boxes) = model_crop.detect(images)
+
+    for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
+        x, y, w, h = bound_boxes
+        #print(x, y, h, w)
+        class_name=classes[int(class_ids)]
+        print(class_name)
+        detected = False
+        if class_name=="person":
+            detected = True
+            print("TRU", np.shape(images))
+            #cv2.putText(image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
+            #cv2.rectangle(image, (x,y), (x+w,y+h), (200, 0, 50), 3)
+            #cv2.imshow("Frame", image)
+            #cv2.waitKey(0)
+            #print(np.shape(image))
+            add = 30
+            image = np.copy(images)
+            if h >= w:
+                diff = int((h - w))
+                low = x - diff - add
+                low = np.clip(low, 0, original_x)
+                high = x - diff + h + add
+                high = np.clip(high, 0, original_x)
+                print("FINAL", y+h+add-(y-add), x+high- (x-low))
+                print(high, low, original_x, original_y)
+                cropped = image[y:y+h,x-low:x+high,:]
+            else:
+                diff = int((w - h))
+                low = y - diff - add
+                low = np.clip(low, 0, original_y)
+                high = y - diff + w + add
+                high = np.clip(high, 0, original_y)
+                print(high, low, original_x, original_y)
+                print("FINAL", y+high-(y-low), x+w- (x-add))
+                cropped = image[y-low:y+high,x:x+w,:]
+            
+            print(np.shape(image), np.shape(cropped))
+            res_cropped = (cv2.resize((cropped), (256,256)))
+            # cv2.imshow("NEW", np.transpose(res_cropped[i]))
+            # cv2.waitKey(0)
+            print(np.shape(res_cropped))
+            break
+    print("ICIIIIIIIIIIIIIIIIIIIIIIII",np.shape(res_cropped))
+    # plt.imshow(np.transpose(res_cropped[1]))
+    # plt.show()
+    return res_cropped
+
 def normalized_to_original(image):
     image_numpy = image.cpu().numpy()
     image_numpy = np.transpose(image_numpy, (0, 2, 3, 1))
@@ -282,8 +354,15 @@ if __name__ == '__main__':
                 break
         cap.release()
 
-        image = frame[:,160:, :]
+        frame = frame
+        print(np.max(frame))
 
+        image_new = images_crop(frame)
+        detected = False
+        if detected:
+            image = image_new
+        else:
+            image = frame[:480,:]
         image = cv2.resize(image, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)#Important to have an image 256x256!!!
         # define dataset and dataloader
         val_dataset = H36M(h5_path = tiny_dataset,video_id=video_id,subject=subject, split='val', image = image)

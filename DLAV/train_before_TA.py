@@ -36,9 +36,9 @@ def images_crop(images):
 
     res_cropped = np.zeros(np.shape(images))
     for i in range(np.shape(images)[0]):
-        print(np.shape(np.transpose(images[i])), type(images))
-        print(type(np.array(images)), torch.max(images))
-        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(np.array(np.transpose(images[i,:,:,:].detach().numpy()))))
+        print(np.shape(np.transpose(images[i])))
+        print(type(np.array(images)))
+        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(np.array(images[i,:,:,:])))
         # plt.imshow(np.transpose(images[i,:,:,:]))
         # plt.show()
         print((class_ids, score, bound_boxes))
@@ -95,9 +95,7 @@ def main(args):
 
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
-     
-    #train_dataset = H36M(args.dataset_path, split='val')
-    train_dataset = H36M(args.batch_size)
+    train_dataset = H36M(args.dataset_path, split='val')
 
     train, validation, test = dataloader.val_loader(train_dataset, config, args.data_ratio, args.validation_ratio, args.test_ratio, args.batch_size)
 
@@ -132,15 +130,9 @@ def main(args):
         for (idx, data) in enumerate(train):
 
             #data, target = data.to(device), target.to(device)            
-            #image_b,joint3d = data
-            joint2d,joint3d, image_b = data
-
-
+            image_b,joint3d = data
             print(np.shape(image_b), type(image_b))
             image = torch.from_numpy(images_crop(image_b)).float()
-            #image = torch.transpose(image,1,3).float()
-
-
             print(type(image[0,0,0,0]))
             #Show which 2d joints are important
             #print("JOINT", np.shape(joint2d))

@@ -11,3 +11,13 @@ csv.npy
 jpg.npy
 DATA_TEST/
 
+DLAV/max_train_3d.npy
+DLAV/mean_train_2d.npy
+DLAV/mean_train_3d.npy
+DLAV/min_train_3d.npy
+DLAV/std_train_2d.npy
+DLAV/std_train_3d.npy
+yolov3.cfg
+yolov3.weights
+yolov4-tiny.cfg
+yolov4-tiny.weights
