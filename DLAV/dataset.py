@@ -146,7 +146,7 @@ from utils import camera_parameters, qv_mult
 import cv2
 
 systm = "laptop"  #izar,vita17,laptop
-act = "" #"Walking"
+act = "Directions" #"Walking"
 load_imgs = True
 from_videos = True
 
@@ -186,14 +186,14 @@ KeyPoints_from3d = [0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27]
 KeyPoints_from3d_to_delete = [4,5,9,10,11,16,20,21,22,23,24,28,29,30,31]
 
 
-
 class H36M(Dataset):
     def __init__(self, num_cams = 1, subjectp=subjects , action=act, transform=None, target_transform=None, is_train = True, batch_size=1):
         self.batch_size = batch_size
         self.cam_ids = [".54138969", ".55011271", ".58860488",  ".60457274", ]
-        self.cam_ids = [".54138969"]
+        self.cam_ids = [".60457274"]
 
-        self.dataset2d, self.dataset3d, self.video_and_frame_paths = self.read_data(subjects= subjectp,action=action,is_train = is_train)
+        self.dataset2d, self.dataset3d, self.video_and_frame_paths, self.global_pos = self.read_data(subjects= subjectp,action=action,is_train = is_train)
+        print(np.shape(self.dataset3d))
         self.dataset2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_2d, z_c = False)
         self.dataset3d = self.process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_3d, z_c = True)
 
@@ -208,26 +208,21 @@ class H36M(Dataset):
 
 
     def __len__(self):
-        return len(self.dataset3d) #number of all the frames 
+        return (np.shape(self.video_and_frame_paths)[0]) #number of all the frames 
 
     def __getitem__(self, idx):
-        
-        print(idx)
-        if idx >= (self.batch_size):
-            idx = 0
-        print(idx)
         if load_imgs:
             if from_videos:
-                print(self.video_and_frame_paths) 
+                print(self.video_and_frame_paths)
                 cap = cv2.VideoCapture(self.video_and_frame_paths[idx][0])
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.video_and_frame_paths[idx][1]) 
                 res, self.frame = cap.read()
-                print(np.shape(self.frame), self.frame)
+                #print(np.shape(self.frame), self.frame)
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
             else :
                 print(self.video_and_frame_paths)
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
-                print(np.shape(self.frame), self.frame)
+                #print(np.shape(self.frame), self.frame)
                 # print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
@@ -238,7 +233,7 @@ class H36M(Dataset):
         self.frame = cv2.resize(self.frame, (256, 256))
         self.frame = self.frame/256.0
 
-        return keypoints_2d, self.dataset3d[idx], self.frame #cam 0 
+        return keypoints_2d, self.dataset3d[idx], self.frame, self.global_pos #cam 0 
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
@@ -345,7 +340,8 @@ class H36M(Dataset):
 
         n_frame = 0 
         for s in subjects:
-            for a in data_file_3d[s].keys():
+            for a in [action]:
+            # for a in data_file_3d[s].keys():
                 if (action in a ) :
                     n_frame += len(data_file_3d[s][a])  
             
@@ -355,13 +351,15 @@ class H36M(Dataset):
         video_and_frame_paths = []
         i = 0
         for s in subjects:
-            for a in ['Directions']:
+            for a in [action]:
             # for a in data_file_3d[s].keys():
                 if action in a :
+                    print(np.shape(data_file_3d[s][a][0]))
                     print(s,a,len(data_file_3d[s][a]))
-                    for frame_num in range(4):#range(len(data_file_3d[s][a])):
+                    for frame_num in range(10):#range(len(data_file_3d[s][a])):
                         #print("FRAME",frame_num)
-                        global_pose = data_file_3d[s][a][frame_num]  
+                        frame_number = 100
+                        global_pose = data_file_3d[s][a][frame_num*frame_number]  
                         global_pose = global_pose[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
 
                         for c in range(1+3*int(AllCameras)) :
@@ -375,23 +373,23 @@ class H36M(Dataset):
                                         
                             all_in_one_dataset_3d[i] = tmp
 
-                            tmp2 = data_file_2d[s][a+self.cam_ids[c]][frame_num]
+                            tmp2 = data_file_2d[s][a+self.cam_ids[c]][frame_num*frame_number]
                             
                             all_in_one_dataset_2d[i] = tmp2[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
 
                             if load_imgs:
                                 #print("LOAD")
                                 if from_videos:
-                                    video_and_frame_paths.append( ["../data/"+a+self.cam_ids[c]+".mp4",frame_num])
+                                    video_and_frame_paths.append( ["../data/"+a+self.cam_ids[c]+".mp4",frame_num*frame_number])
                                 else:
                                     if systm == "laptop":
-                                        video_and_frame_paths.append( ["../data/"+a+self.cam_ids[c]+".mp4",frame_num])
+                                        video_and_frame_paths.append( ["../data/"+a+self.cam_ids[c]+".mp4",frame_num*frame_number])
                                         # video_and_frame_paths.append( ["../data/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
                                         #print(video_and_frame_paths)
                                     else:
-                                        video_and_frame_paths.append( ["/data/rh-data/h3.6/videos/"+s+"/outputVideos/"+a+self.cam_ids[c]+".mp4/"+str(frame_num+1).zfill(4)+".jpg",frame_num])
+                                        video_and_frame_paths.append( ["/data/rh-data/h3.6/videos/"+s+"/outputVideos/"+a+self.cam_ids[c]+".mp4/"+str(frame_num*frame_number+1).zfill(4)+".jpg",frame_num*frame_number])
 
                             i = i + 1 
 
         
-        return all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths
+        return all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths, global_pose

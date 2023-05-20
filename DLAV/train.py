@@ -20,12 +20,12 @@ from HEMlets.getActionID import LoadSeqJsonDict
 import matplotlib.pyplot as plt
 import cv2
 
-def images_crop(images):
+def images_crop(images, global_pos):
     net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
     model_crop = cv2.dnn_DetectionModel(net)
     #Resize into a small square (320,320) to process a fast analysis
     #Scale because the dnn go from 0 to 1 and the pixel value from 0 to 255
-    model_crop.setInputParams(size=(320,320), scale=1)
+    model_crop.setInputParams(size=(320,320), scale=1/255)
 
     classes = []
     with open("../ckpt/classes.txt", "r") as file_object:
@@ -34,21 +34,24 @@ def images_crop(images):
             class_name = class_name.strip()
             classes.append(class_name)
 
-    res_cropped = np.zeros(np.shape(images))
+    res_cropped = np.zeros(np.shape(np.transpose(images, (0,3,2,1))))
     for i in range(np.shape(images)[0]):
-        print(np.shape(np.transpose(images[i])), type(images))
-        print(type(np.array(images)), torch.max(images))
-        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(np.array(np.transpose(images[i,:,:,:].detach().numpy()))))
+        image=(np.array(np.transpose(images[i,:,:,:].detach().numpy())))
+        image=image*255
+        image = image.astype(np.uint8)
+
+        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(image)) 
         # plt.imshow(np.transpose(images[i,:,:,:]))
         # plt.show()
-        print((class_ids, score, bound_boxes))
+        image = image.astype(np.float)
+        image = image / 255
+
         for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
             x, y, w, h = bound_boxes
             #print(x, y, h, w)
             class_name=classes[int(class_ids)]
             
             if class_name=="person":
-                print("TRU", np.shape(images))
                 #cv2.putText(image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
                 #cv2.rectangle(image, (x,y), (x+w,y+h), (200, 0, 50), 3)
                 #cv2.imshow("Frame", image)
@@ -56,7 +59,6 @@ def images_crop(images):
                 #print(np.shape(image))
                 add = 10
                 image = np.copy(images[i])
-                print("IMAGEW", np.shape(image))
                 original_x = 256
                 original_y = 256
                 if h >= w:
@@ -65,26 +67,40 @@ def images_crop(images):
                     low = np.clip(low, 0, original_x)
                     high = x - diff + h + add
                     high = np.clip(high, 0, original_x)
-                    print("FINAL", y+h+add-(y-add), x+high- (x-low), low, high)
-                    print(high, low, original_x, original_y,h,w)
 
-                    cropped = image[:,low:high,np.clip(y-add, 0, 256):np.clip(y+h+add, 0, 256)]
+                    cropped = image[np.clip(y-add, 0, 256):np.clip(y+h+add, 0, 256),low:high,:]
+                    
                 else:
                     diff = int((w-h)/2)
                     low = y - diff - add
                     low = np.clip(low, 0, original_y)
                     high = y - diff + w + add
                     high = np.clip(high, 0, original_y)
-                    print(high, low, original_x, original_y)
-                    print("FINAL", high-(y-low), x+w- (x-add),h,w, low, high)
-                    cropped = image[:,np.clip(x-add, 0, 256):np.clip(x+w+add, 0, 256),low:high]
-                print(np.shape(res_cropped), np.shape(cropped))
-                res_cropped[i,:,:,:] = np.transpose(cv2.resize(np.transpose(cropped), (256,256)))
-                print(np.shape(res_cropped))
+                    cropped = image[low:high,np.clip(x-add, 0, 256):np.clip(x+w+add, 0, 256),:]
+                res_cropped[i,:,:,:] = np.transpose(cv2.resize((cropped), (256,256)))
                 break
-        print("ICIIIIIIIIIIIIIIIIIIIIIIII",np.shape(res_cropped))
         plt.imshow(np.transpose(res_cropped[i]))
+
+        x = global_pos[i,:, 2]
+        y = global_pos[i,:, 0]
+        z = -global_pos[i,:, 1]
+
+        # Creating the 3D plot
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Scatter plot of the data points
+        
+
+        # Set labels for the axes
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        # ax1.scatter(x1, y1, z1, c='b', marker='o')
+        ax.scatter(x, y, z, c='b', marker='o')
+        #plt.imshow((np.transpose(image[0])))
         plt.show()
+        # plt.show()
     return res_cropped
 def main(args):
     #Files to save the losses
@@ -133,17 +149,14 @@ def main(args):
 
             #data, target = data.to(device), target.to(device)            
             #image_b,joint3d = data
-            joint2d,joint3d, image_b = data
+            #joint2d,joint3d, image_b = data
+            joint2d,joint3d, image_b, global_pos = data
 
-
-            print(np.shape(image_b), type(image_b))
-            image = torch.from_numpy(images_crop(image_b)).float()
+            image = torch.from_numpy(images_crop(image_b, global_pos)).float()
             #image = torch.transpose(image,1,3).float()
 
 
-            print(type(image[0,0,0,0]))
             #Show which 2d joints are important
-            #print("JOINT", np.shape(joint2d))
             joints2d_list = np.array([0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27])
 
             #Correspondance dictionary between joints -> layer:
@@ -173,16 +186,13 @@ def main(args):
             #plt.scatter(joint2d[0,joints2d_list,0], joint2d[0,joints2d_list,1])
             #plt.show()
 
-            print("IMAGES", np.shape(image))
             optimizer.zero_grad()
             output, middle_out = model(image)
-            print(np.shape(image[0]), np.shape(np.transpose(image[0])), type([image[0,0,0,0]]))
             # Extracting x, y, and z coordinates
 
 
             # Show the plot
             if epoch == 90:
-                print(np.shape(np.transpose(image[0])))
                 x1 = output[0,:, 2].detach().numpy()
                 y1 = output[0,:, 0].detach().numpy()
                 z1 = -output[0,:, 1].detach().numpy()
@@ -296,7 +306,6 @@ def main(args):
                 plt.show()"""
 
             #print("HEATMAP",np.shape(heatmap))
-            print("DDDDDDDDDDDDDDDDDDDDDDDDD",np.shape(joint3d))
             loss = criterion(output, joint3d, middle_out, heatmap)
             optimizer.zero_grad()
             loss.backward()
@@ -316,8 +325,10 @@ def main(args):
             count_loss += 1
             loss_train += loss.item()
         for (idx, data) in enumerate(validation):
-            image_bv,joint3d = data
-            image = torch.from_numpy(images_crop(image_bv)).float()
+            # joint2d,joint3d, image_bv = data
+            joint2d,joint3d, image_bv, global_pos_v = data
+
+            image = torch.from_numpy(images_crop(image_bv, global_pos_v)).float()
             #print(np.shape(image))
             val_output, middle_out = model(image)
             heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joint3d)[1], np.shape(middle_out)[2],np.shape(middle_out)[3]))
@@ -380,7 +391,6 @@ def main(args):
             f = open("checkpoints/loss_val.txt", "a")
             f.write(repr(epoch) + ", " + repr(loss_val.item()) + "\n")
             f.close()
-            print(np.shape(np.transpose(image[0])))
         
             x1 = output[0,:, 2].detach().numpy()
             y1 = output[0,:, 0].detach().numpy()

@@ -22,7 +22,6 @@ class MPJPE_Loss(nn.Module):
         L2D = 0
         LHEM = 0
         l3D = 0
-        print("JOINT3D",np.shape(joint3d))
         #assert pred.shape == joint3d.shape, "Predicted and target shapes do not match"
 
         num_joints = pred.shape[1]
@@ -42,9 +41,7 @@ class MPJPE_Loss(nn.Module):
         if np.shape(joint3d)[2] == 2:
             l3D = torch.mean(torch.abs(joint3d[:,:,0] - pred[:,:,0]) + torch.abs(joint3d[:,:,1] - pred[:,:,1]))
         elif np.shape(joint3d)[2] == 3:
-            print("HEHEHE",np.shape(pred[:,:17,:]), np.shape(pred), np.shape(joint3d))
-            print("ICIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII", np.shape(torch.sum(torch.abs(joint3d - pred[:,:17,:]), axis = (2))))
-            print(torch.sum(torch.mean(torch.abs(joint3d - pred[:,:17,:]), axis = (0,2))))
+            #Loss from paper
             l3D = torch.sum(torch.mean(torch.abs(joint3d - pred[:,:17,:]), axis = (0,2)))
             
             #CHAT
@@ -53,7 +50,6 @@ class MPJPE_Loss(nn.Module):
 
 
             l3D = torch.sum(torch.mean(torch.sum(torch.abs(joint3d - pred[:,:17,:]), axis = (2)), axis = 0))
-            print(np.shape(l3D))
 
         #L2D
         #If only Human3.6M, stops at 17
@@ -63,7 +59,6 @@ class MPJPE_Loss(nn.Module):
         #print(H_lay.shape)
 
         diff = torch.sub(H_lay, torch.from_numpy(heatmap)).detach().numpy()
-        print("HAHAHA", np.shape(np.linalg.norm(diff, axis=(2,3))**2), np.mean(np.sum(np.linalg.norm(diff, axis=(2,3))**2, axis =1)))
         L2D = np.mean(np.sum(np.linalg.norm(diff, axis=(2,3))**2, axis =1))
         """ diff = torch.sqrt(torch.sum(diff ** 2, dim=2))
         loss = torch.sum(diff) """
@@ -79,7 +74,6 @@ class MPJPE_Loss(nn.Module):
         #List of [[parent, child]]
         parent = [[13, 15], [13, 17], [13, 18], [13, 19], [13, 25], [13, 26], [13, 27], [0, 13], [0, 1], [0, 2], [0, 3], [0, 6], [0, 7], [0, 8]]
         parent = [[0,1], [1,2],[2,3],[0,4],[4,5],[5,6],[0,8],[8,14],[14,15],[15,16],[8,11],[11,12],[12,13],[8,10]]
-        print(np.shape(heatmap))
         for j in range(np.shape(heatmap)[0]):
             for i in range(np.shape(parent)[0]):
                 #print("CORRESPONDANCE : First is z, 9 ",correspondance.get(parent[i][0]), correspondance.get(parent[i][1]))
@@ -100,12 +94,11 @@ class MPJPE_Loss(nn.Module):
                 #Lambda_H36m[17] = np.zeros(np.shape(T_GT)[0])
                 T_pred = middle_out[j, 17 + 3*i:17 + 3*(i+1), :, :].detach().numpy()
                 LHEM[j] += np.sum(np.linalg.norm(np.multiply((T_GT - T_pred), Lambda_H36m), axis=(1,2))) ** 2
-        print(np.shape(LHEM))
         ##############################################################
         Lint = np.mean(LHEM)/20 + L2D
         loss = l3D + 0.0*Lint
         print("LHEM", np.mean(LHEM)/20)
-        print("Lint, L3D, loss", 0.005*Lint, l3D.item(), loss.item())
+        print("Lint, L3D, loss", Lint, l3D.item(), loss.item())
 
         return loss
     

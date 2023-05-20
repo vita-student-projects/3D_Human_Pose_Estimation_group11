@@ -1,9 +1,12 @@
 import math
 
 import torch
+import numpy as np
 
 def val_loader(dataset, config, data_ratio, validation_ratio, test_ratio, batch_size):
+    print("DATASET",np.shape(dataset))
     num_data = len(dataset)
+    print("NUM_DATA",num_data)
     print(dataset)
 
     data_length = int(data_ratio * num_data)
