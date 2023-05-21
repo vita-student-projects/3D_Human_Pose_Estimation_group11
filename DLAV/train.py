@@ -20,7 +20,7 @@ from HEMlets.getActionID import LoadSeqJsonDict
 import matplotlib.pyplot as plt
 import cv2
 
-def images_crop(images, global_pos):
+def images_crop(images, global_pos, joint3d):
     net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
     model_crop = cv2.dnn_DetectionModel(net)
     #Resize into a small square (320,320) to process a fast analysis
@@ -79,27 +79,52 @@ def images_crop(images, global_pos):
                     cropped = image[low:high,np.clip(x-add, 0, 256):np.clip(x+w+add, 0, 256),:]
                 res_cropped[i,:,:,:] = np.transpose(cv2.resize((cropped), (256,256)))
                 break
-        plt.imshow(np.transpose(res_cropped[i]))
+        
 
         x = global_pos[i,:, 2]
         y = global_pos[i,:, 0]
         z = -global_pos[i,:, 1]
-
+        print(np.shape(global_pos))
         # Creating the 3D plot
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
         # Scatter plot of the data points
-        
 
         # Set labels for the axes
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         # ax1.scatter(x1, y1, z1, c='b', marker='o')
-        ax.scatter(x, y, z, c='b', marker='o')
+        # ax.scatter(x, y, z, c='b', marker='o')
+        # plt.show()
+        keypoints = global_pos[i]
+        xdata = keypoints[:,0]
+        ydata = keypoints[:,1]
+        zdata = keypoints[:,2]
+        ax.scatter(xdata,ydata,zdata,"b",label="expectations")
+        sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
+        print("TA",np.shape(sk_points), np.shape(xdata), np.shape(global_pos), np.shape(keypoints))
+        for j in range(17):
+            ax.plot(xdata[sk_points[j]], ydata[sk_points[j]], zdata[sk_points[j]] , "b" )
+        plt.xlim([-1.5, 1.5])
+        plt.ylim([-1.5, 1.5])
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111, projection='3d')
+        keypoints = joint3d[i]
+        xdata = keypoints[:,0]
+        ydata = keypoints[:,1]
+        zdata = keypoints[:,2]
+        ax1.scatter(xdata,ydata,zdata,"b",label="expectations")
+        sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
+        print("TA",np.shape(sk_points), np.shape(xdata), np.shape(global_pos), np.shape(keypoints))
+        for j in range(17):
+            ax1.plot(xdata[sk_points[j]], ydata[sk_points[j]], zdata[sk_points[j]] , "b" )
+
         #plt.imshow((np.transpose(image[0])))
-        plt.show()
+        #plt.show() here
+        #plt.imshow(np.transpose(res_cropped[i]))
+        #plt.show()
         # plt.show()
     return res_cropped
 def main(args):
@@ -151,8 +176,8 @@ def main(args):
             #image_b,joint3d = data
             #joint2d,joint3d, image_b = data
             joint2d,joint3d, image_b, global_pos = data
-
-            image = torch.from_numpy(images_crop(image_b, global_pos)).float()
+            print(np.shape(joint3d), np.shape(global_pos))
+            image = torch.from_numpy(images_crop(image_b, global_pos, joint3d)).float()
             #image = torch.transpose(image,1,3).float()
 
 
@@ -229,7 +254,7 @@ def main(args):
                 ax1.scatter(x1, y1, z1, c='b', marker='o')
                 ax.scatter(x, y, z, c='b', marker='o')
                 #plt.imshow((np.transpose(image[0])))
-                plt.show()
+                #plt.show()
             #print(np.shape(middle_out))
 
             #Normalization of the middle_output
@@ -328,7 +353,7 @@ def main(args):
             # joint2d,joint3d, image_bv = data
             joint2d,joint3d, image_bv, global_pos_v = data
 
-            image = torch.from_numpy(images_crop(image_bv, global_pos_v)).float()
+            image = torch.from_numpy(images_crop(image_bv, global_pos_v, joint3d)).float()
             #print(np.shape(image))
             val_output, middle_out = model(image)
             heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joint3d)[1], np.shape(middle_out)[2],np.shape(middle_out)[3]))
@@ -428,7 +453,7 @@ def main(args):
             ax1.scatter(x1, y1, z1, c='b', marker='o')
             ax.scatter(x, y, z, c='b', marker='o')
             #plt.imshow((np.transpose(image[0])))
-            plt.show()
+            #plt.show()
 
       
 

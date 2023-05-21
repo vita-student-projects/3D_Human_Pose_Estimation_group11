@@ -233,7 +233,7 @@ class H36M(Dataset):
         self.frame = cv2.resize(self.frame, (256, 256))
         self.frame = self.frame/256.0
 
-        return keypoints_2d, self.dataset3d[idx], self.frame, self.global_pos #cam 0 
+        return keypoints_2d, self.dataset3d[idx], self.frame, self.global_pos[idx] #cam 0 
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
@@ -339,15 +339,19 @@ class H36M(Dataset):
         data_file_2d = data_file_2d['positions_2d'].item()
 
         n_frame = 0 
+        number_image_per_video = 10
         for s in subjects:
             for a in [action]:
             # for a in data_file_3d[s].keys():
                 if (action in a ) :
-                    n_frame += len(data_file_3d[s][a])  
+                    n_frame += number_image_per_video
+                    # n_frame += len(data_file_3d[s][a])  
             
-
+        print("NUMBER OF FRame", n_frame)
         all_in_one_dataset_3d = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,3),  dtype=np.float32)
         all_in_one_dataset_2d = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,2),  dtype=np.float32)
+        global_pose = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,3),  dtype=np.float32)
+        print("HHHD", np.shape(global_pose), AllCameras)
         video_and_frame_paths = []
         i = 0
         for s in subjects:
@@ -355,16 +359,17 @@ class H36M(Dataset):
             # for a in data_file_3d[s].keys():
                 if action in a :
                     print(np.shape(data_file_3d[s][a][0]))
-                    print(s,a,len(data_file_3d[s][a]))
-                    for frame_num in range(10):#range(len(data_file_3d[s][a])):
+                    print(s,a,number_image_per_video)
+                    # print(s,a,len(data_file_3d[s][a]))
+                    for frame_num in range(number_image_per_video):#range(len(data_file_3d[s][a])):
                         #print("FRAME",frame_num)
                         frame_number = 100
-                        global_pose = data_file_3d[s][a][frame_num*frame_number]  
-                        global_pose = global_pose[ KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
+                        global_pose_one_img = data_file_3d[s][a][frame_num*frame_number]  
+                        global_pose[frame_num] = global_pose_one_img[KeyPoints_from3d ,:] #only keeping the 16 or 17 keypoints we want
 
                         for c in range(1+3*int(AllCameras)) :
 
-                            tmp = global_pose.copy()
+                            tmp = global_pose[frame_num].copy()
 
                             if CameraView:
                                 for j in range(len(tmp)): 
