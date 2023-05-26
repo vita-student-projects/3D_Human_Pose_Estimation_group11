@@ -193,9 +193,8 @@ class H36M(Dataset):
         self.cam_ids = [".60457274"]
 
         self.dataset2d, self.dataset3d, self.video_and_frame_paths, self.global_pos = self.read_data(subjects= subjectp,action=action,is_train = is_train)
-        print(np.shape(self.dataset3d))
-        self.dataset2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_2d, z_c = False)
-        self.dataset3d = self.process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_3d, z_c = True)
+        self.dataset2d, self.min2d, self.max2d = self.process_data(self.dataset2d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_2d, z_c = False)
+        self.dataset3d, self.min3d, self.max3d = self.process_data(self.dataset3d,  sample = False if len(subjectp)==2 else sample, is_train = is_train, standardize=standardize_3d, z_c = True)
 
         self.transform = transform
         self.target_transform = target_transform
@@ -211,124 +210,153 @@ class H36M(Dataset):
         return (np.shape(self.video_and_frame_paths)[0]) #number of all the frames 
 
     def __getitem__(self, idx):
+        img_mean = np.array([123.675,116.280,103.530])
+        img_std = np.array([58.395,57.120,57.375])
+        # image_numpy = image.cpu().numpy()
+        # image_numpy = np.transpose(image_numpy, (0, 2, 3, 1))
+        # image_numpy = image_numpy * img_std + img_mean
+        # return image_numpy.astype(np.uint8)
+
         if load_imgs:
             if from_videos:
-                print(self.video_and_frame_paths)
                 cap = cv2.VideoCapture(self.video_and_frame_paths[idx][0])
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.video_and_frame_paths[idx][1]) 
                 res, self.frame = cap.read()
                 #print(np.shape(self.frame), self.frame)
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                # self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                # self.frame = self.frame * img_std + img_mean
+                print("IMAGESASDDS VFS", np.max(self.frame), np.min(self.frame))
             else :
-                print(self.video_and_frame_paths)
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
                 #print(np.shape(self.frame), self.frame)
                 # print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
-                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-
+                # self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                # self.frame = (self.frame - img_mean) / img_std 
             
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
-
         #resising the image for Resnet
         self.frame = cv2.resize(self.frame, (256, 256))
-        self.frame = self.frame/256.0
 
-        return keypoints_2d, self.dataset3d[idx], self.frame, self.global_pos[idx] #cam 0 
+        #self.frame = self.frame/256.0
+        return keypoints_2d, self.dataset3d[idx], self.frame.astype(np.uint8), self.global_pos[idx], self.min2d[idx], self.max2d[idx], self.min3d[idx], self.max3d[idx] #cam 0 
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
-
         n_frames, n_joints, dim = dataset.shape
-
-        if z_c:
-            for i in range(n_frames):
-                dataset[i,1:] = dataset[i,1:] - dataset[i,0]
-
-        if is_train :
-            data_sum = np.sum(dataset, axis=0)
-            data_mean = np.divide(data_sum, n_frames)
-
-
-            diff_sq2_sum =np.zeros((n_joints,dim))
-            for i in range(n_frames):
-                diff_sq2_sum += np.power( dataset[i]-data_mean ,2)
-            data_std = np.divide(diff_sq2_sum, n_frames)
-            data_std = np.sqrt(data_std)
-
+        if dim == 3:
+            max3d = np.zeros((np.shape(dataset)[0], np.shape(dataset)[2]))
+            min3d = np.zeros((np.shape(dataset)[0], np.shape(dataset)[2]))
             
-            if dim == 2:
-                with open("mean_train_2d.npy","wb") as f:
-                    np.save(f, data_mean)
-                with open("std_train_2d.npy","wb") as f:
-                    np.save(f, data_std)  
+            # for i in range(n_frames):
+            max3d = np.max(dataset, axis = (1))
+            min3d = np.min(dataset, axis = (1))
+            max3d_exp = np.expand_dims(max3d, axis=1)
+            min3d_exp = np.expand_dims(min3d, axis=1)
+            dataset = (dataset- min3d_exp)/(max3d_exp - min3d_exp)
+            return dataset, min3d_exp, max3d_exp
+        else:
+            max2d = np.zeros((np.shape(dataset)[0], np.shape(dataset)[2]))
+            min2d = np.zeros((np.shape(dataset)[0], np.shape(dataset)[2]))
+  
+            max2d = np.max(dataset, axis = (1))
+            min2d = np.min(dataset, axis = (1))
+            max2d_exp = np.expand_dims(max2d, axis=1)
+            min2d_exp = np.expand_dims(min2d, axis=1)
+            dataset = (dataset- min2d_exp)/(max2d_exp - min2d_exp)
+
+            return dataset, min2d_exp, max2d_exp
+            return dataset
+            #print(np.max(dataset,axis = (0,1,2)), np.min(dataset,axis = (0,1,2)))
+            return (dataset - np.max(dataset,axis = (0,1,2))) / (np.max(dataset,axis = (0,1,2)) - np.min(dataset,axis = (0,1,2)))
+            if z_c:
+                for i in range(n_frames):
+                    dataset[i,1:] = dataset[i,1:] - dataset[i,0]
+
+            if is_train :
+                data_sum = np.sum(dataset, axis=0)
+                data_mean = np.divide(data_sum, n_frames)
 
 
-            elif dim == 3:
-                with open("mean_train_3d.npy","wb") as f:
-                    np.save(f, data_mean)  
-                with open("std_train_3d.npy","wb") as f:
-                    np.save(f, data_std)  
-                    
-                with open("max_train_3d.npy","wb") as f:
-                    np.save(f, np.max(dataset, axis=0))  
-                with open("min_train_3d.npy","wb") as f:
-                    np.save(f, np.min(dataset, axis=0)) 
+                diff_sq2_sum =np.zeros((n_joints,dim))
+                for i in range(n_frames):
+                    diff_sq2_sum += np.power( dataset[i]-data_mean ,2)
+                data_std = np.divide(diff_sq2_sum, n_frames)
+                data_std = np.sqrt(data_std)
 
-
-        if dim == 2:
-            with open("mean_train_2d.npy","rb") as f:
-                mean_train_2d = np.load(f)
-            with open("std_train_2d.npy","rb") as f:
-                std_train_2d = np.load(f)  
-        elif dim == 3:
-            with open("mean_train_3d.npy","rb") as f:
-                mean_train_3d =np.load(f)  
-            with open("std_train_3d.npy","rb") as f:
-                std_train_3d = np.load(f)  
                 
-            with open("max_train_3d.npy","rb") as f:
-                max_train_3d =np.load(f)  
-            with open("min_train_3d.npy","rb") as f:
-                min_train_3d = np.load(f)  
+                if dim == 2:
+                    with open("mean_train_2d.npy","wb") as f:
+                        np.save(f, data_mean)
+                    with open("std_train_2d.npy","wb") as f:
+                        np.save(f, data_std)  
 
 
-        if standardize :
-            if dim == 2 :
-                for i in range(n_frames):
-                    if Normalize:
-                        # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
-                        # print(max_dataset, min_dataset)
-                        # dataset[i] = np.divide(2*dataset[i], (max_dataset-min_dataset))
-                        # dataset[i] = dataset[i] - np.divide(min_dataset, (max_dataset-min_dataset))
-                        dataset[i] = 2*dataset[i] -1 
+                elif dim == 3:
+                    with open("mean_train_3d.npy","wb") as f:
+                        np.save(f, data_mean)  
+                    with open("std_train_3d.npy","wb") as f:
+                        np.save(f, data_std)  
+                        
+                    with open("max_train_3d.npy","wb") as f:
+                        np.save(f, np.max(dataset, axis=0))  
+                    with open("min_train_3d.npy","wb") as f:
+                        np.save(f, np.min(dataset, axis=0)) 
 
-                    else:
-                        dataset[i] = np.divide(dataset[i] - mean_train_2d, std_train_2d)
+
+            if dim == 2:
+                with open("mean_train_2d.npy","rb") as f:
+                    mean_train_2d = np.load(f)
+                with open("std_train_2d.npy","rb") as f:
+                    std_train_2d = np.load(f)  
             elif dim == 3:
-                for i in range(n_frames):
-                    if Normalize:
-                        # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
-                        dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d))
-                    else:
-                        dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
+                with open("mean_train_3d.npy","rb") as f:
+                    mean_train_3d =np.load(f)  
+                with open("std_train_3d.npy","rb") as f:
+                    std_train_3d = np.load(f)  
+                    
+                with open("max_train_3d.npy","rb") as f:
+                    max_train_3d =np.load(f)  
+                with open("min_train_3d.npy","rb") as f:
+                    min_train_3d = np.load(f)  
 
 
-        if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false    
-            dataset = dataset[:, 1:, :].copy()
-        elif z_c :
-            dataset [:,:1,:] *= 0
+            if standardize :
+                if dim == 2 :
+                    for i in range(n_frames):
+                        if Normalize:
+                            # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
+                            # print(max_dataset, min_dataset)
+                            # dataset[i] = np.divide(2*dataset[i], (max_dataset-min_dataset))
+                            # dataset[i] = dataset[i] - np.divide(min_dataset, (max_dataset-min_dataset))
+                            dataset[i] = 2*dataset[i] -1 
+
+                        else:
+                            dataset[i] = np.divide(dataset[i] - mean_train_2d, std_train_2d)
+                elif dim == 3:
+                    for i in range(n_frames):
+                        if Normalize:
+                            # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
+                            dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d))
+                        else:
+                            dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
 
 
-        if dim == 2 and sample :
-            dataset = dataset.reshape((int(n_frames/4),4, num_of_joints,2))
+            if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false    
+                dataset = dataset[:, 1:, :].copy()
+            elif z_c :
+                dataset [:,:1,:] *= 0
 
-        dataset = dataset[Samples] if sample else dataset
 
-        if dim == 2 and sample :
-            dataset = dataset.reshape(-1, num_of_joints,2)  
+            if dim == 2 and sample :
+                dataset = dataset.reshape((int(n_frames/4),4, num_of_joints,2))
 
-        return dataset
-    
+            dataset = dataset[Samples] if sample else dataset
+
+            if dim == 2 and sample :
+                dataset = dataset.reshape(-1, num_of_joints,2)  
+
+            return dataset
+        
     
     def read_data(self,subjects = subjects, action = "", is_train=True):
         print("TREAD")
@@ -347,11 +375,9 @@ class H36M(Dataset):
                     n_frame += number_image_per_video
                     # n_frame += len(data_file_3d[s][a])  
             
-        print("NUMBER OF FRame", n_frame)
         all_in_one_dataset_3d = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,3),  dtype=np.float32)
         all_in_one_dataset_2d = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,2),  dtype=np.float32)
         global_pose = np.zeros((4*n_frame if AllCameras else n_frame, 17 ,3),  dtype=np.float32)
-        print("HHHD", np.shape(global_pose), AllCameras)
         video_and_frame_paths = []
         i = 0
         for s in subjects:
@@ -396,5 +422,5 @@ class H36M(Dataset):
 
                             i = i + 1 
 
-        
+        all_in_one_dataset_2d[:,:,1] = 1 - all_in_one_dataset_2d[:,:,1]
         return all_in_one_dataset_2d, all_in_one_dataset_3d , video_and_frame_paths, global_pose

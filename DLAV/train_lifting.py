@@ -10,9 +10,9 @@ import torch.optim as optim
 #from hemlets import HEMletsPose
 from dataset import H36M
 #from loss import MyLoss # replace with your own loss function
-from loss import MPJPE_Loss
+from loss_lifting import MPJPE_Loss
 from HEMlets.config import config
-from network import Network
+from network_lifting import Network
 import dataloader
 from HEMlets.model_opr import load_model
 from dataset import H36M
@@ -22,29 +22,6 @@ import cv2
 from scipy.ndimage import gaussian_filter
 from scipy.stats import multivariate_normal
 
-def create_heatmap(joint3d, middle_out_size):
-    heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joint3d)[1], middle_out_size, middle_out_size))
-    for l in range(np.shape(joint3d)[0]):
-        for k in range(np.shape(joint3d)[1]):
-            # Define the 2D point
-            x, y = np.array([joint3d[l,k,0], joint3d[l,k,1]])*64
-            
-            grid_size = 64
-            grid = np.zeros((grid_size, grid_size))
-            
-            mean = [x, y]
-            covariance = [[2, 0], [0, 2]]
-            gaussian = multivariate_normal(mean=mean, cov=covariance)
-
-            for i in range(grid_size):
-                for j in range(grid_size):
-                    grid[i, j] = gaussian.pdf([i, j])
-
-            heatmap[l, k, :, :] = grid/np.max(grid)
-            # plt.imshow(heatmap[l,k,:,:], cmap='hot')
-            # plt.colorbar()
-            # plt.show()
-    return heatmap
 def show_skeleton(joints):
     for i in range(np.shape(joints)[0]):
         fig = plt.figure()
@@ -69,11 +46,9 @@ def show_skeleton(joints):
         plt.show()
 def inverse_norm(skeleton, min3d, max3d):
     skeleton = skeleton.detach().numpy()
-    print(type(max3d), type(skeleton))
     min3d = min3d.detach().numpy()
     max3d = max3d.detach().numpy()
     rec_skeleton = np.zeros(np.shape(skeleton))
-    print(np.shape(skeleton),np.shape(min3d))
     # for i in range(np.shape(skeleton)[0]):
     #     rec_skeleton[i] = (np.add(skeleton[i], min3d[i]))*(max3d[i] - min3d[i])
     rec_skeleton = (skeleton) * (max3d - min3d) + min3d
@@ -83,75 +58,6 @@ def inverse_norm(skeleton, min3d, max3d):
     return rec_skeleton
 
 
-def images_crop(images, global_pos, joint3d):
-    net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
-    model_crop = cv2.dnn_DetectionModel(net)
-    #Resize into a small square (320,320) to process a fast analysis
-    #Scale because the dnn go from 0 to 1 and the pixel value from 0 to 255
-    model_crop.setInputParams(size=(320,320), scale=1/255)
-
-    classes = []
-    with open("../ckpt/classes.txt", "r") as file_object:
-        for class_name in file_object.readlines():
-            #To get the good shape of inputs
-            class_name = class_name.strip()
-            classes.append(class_name)
-
-    res_cropped = np.zeros(np.shape(np.transpose(images, (0,3,2,1))))
-    for i in range(np.shape(images)[0]):
-        image=(np.array(np.transpose(images[i,:,:,:].detach().numpy())))
-        image=image*255
-        image = image.astype(np.uint8)
-
-        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(image)) 
-        # plt.imshow(np.transpose(images[i,:,:,:]))
-        # plt.show()
-        image = image.astype(np.float)
-        image = image / 255
-
-        for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
-            x, y, w, h = bound_boxes
-            #print(x, y, h, w)
-            class_name=classes[int(class_ids)]
-            
-            if class_name=="person":
-                #cv2.putText(image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
-                #cv2.rectangle(image, (x,y), (x+w,y+h), (200, 0, 50), 3)
-                #cv2.imshow("Frame", image)
-                #cv2.waitKey(0)
-                #print(np.shape(image))
-                add = 10
-                image = np.copy(images[i])
-                original_x = 256
-                original_y = 256
-                if h >= w:
-                    diff = int((h-w)/2)
-                    low = x - diff - add
-                    low = np.clip(low, 0, original_x)
-                    high = x - diff + h + add
-                    high = np.clip(high, 0, original_x)
-
-                    cropped = image[np.clip(y-add, 0, 256):np.clip(y+h+add, 0, 256),low:high,:]
-                    
-                else:
-                    diff = int((w-h)/2)
-                    low = y - diff - add
-                    low = np.clip(low, 0, original_y)
-                    high = y - diff + w + add
-                    high = np.clip(high, 0, original_y)
-                    cropped = image[low:high,np.clip(x-add, 0, 256):np.clip(x+w+add, 0, 256),:]
-                res_cropped[i,:,:,:] = np.transpose(cv2.resize((cropped), (256,256)))
-                break
-        
-
-        x = global_pos[i,:, 2]
-        y = global_pos[i,:, 0]
-        z = -global_pos[i,:, 1]
-        print(np.shape(global_pos))
-       
-        # show_skeleton(global_pos)
-        
-    return res_cropped
 def main(args):
     show = False
     #Files to save the losses
@@ -173,10 +79,7 @@ def main(args):
 
     # Set up model and optimizer
     model = Network(config)
-
-    #Load the pretrained network
     #model.load_state_dict(torch.load("../ckpt/hemlets_h36m_lastest.pth", map_location = torch.device('cpu')))
-    
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     # Set up loss function
@@ -190,7 +93,7 @@ def main(args):
     seqJsonDict = {}
     for seq in seqList:
         seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
-    
+    temp = 0
     for epoch in range(args.epochs):
 
         loss_train = 0
@@ -199,70 +102,19 @@ def main(args):
 
             joint2d,joint3d, image_b, global_pos, min2d, max2d, min3d, max3d = data
 
-            image = torch.from_numpy(images_crop(image_b, global_pos, joint3d)).float()
-
-            #Show which 2d joints are important
-            joints2d_list = np.array([0,1,2,3,6,7,8,12,13,14,15,17,18,19,25,26,27])
-
-            #Correspondance dictionary between joints -> layer:
-            correspondance = {0:0,1:1,2:2,3:3,6:4,7:4,8:5,12:6,13:7,14:8,15:9,17:10,18:11,19:12,25:13,26:14,27:15}
-            
-            #https://github.com/una-dinosauria/3d-pose-baseline/issues/185
-            """ H36M_NAMES = ['']*32
-            H36M_NAMES[0] = 'Hip'
-            H36M_NAMES[1] = 'RHip'
-            H36M_NAMES[2] = 'RKnee'
-            H36M_NAMES[3] = 'RFoot'
-            H36M_NAMES[6] = 'LHip'
-            H36M_NAMES[7] = 'LKnee'
-            H36M_NAMES[8] = 'LFoot'
-            H36M_NAMES[12] = 'Spine'
-            H36M_NAMES[13] = 'Thorax'              p,c 13, 15      13-17-18-19     13-25-26-27     0-13    0-1-2-3     0-6-7-8
-            H36M_NAMES[14] = 'Neck/Nose'
-            H36M_NAMES[15] = 'Head'                         Il y en a 14, c'est juste!
-            H36M_NAMES[17] = 'LShoulder'
-            H36M_NAMES[18] = 'LElbow'
-            H36M_NAMES[19] = 'LWrist'
-            H36M_NAMES[25] = 'RShoulder'
-            H36M_NAMES[26] = 'RElbow'
-            H36M_NAMES[27] = 'RWrist' """
-            
-            #https://github.com/una-dinosauria/3d-pose-baseline/issues/185
-            # plt.scatter(joint2d[0, :, 0], joint2d[0,:,1])
-            # plt.show()
-
             optimizer.zero_grad()
-            output, middle_out = model(image)
+            output = model(joint2d)
             # Extracting x, y, and z coordinates
             reconstructed_skeleton = inverse_norm(output, min3d, max3d)
             reconstructed_global_pos = inverse_norm(global_pos, min3d, max3d)
-            show_skeleton(global_pos[:,:17,:])
-            show_skeleton(output[:,:17,:].detach().numpy())
-            show_skeleton(reconstructed_global_pos[:,:17,:])
-            show_skeleton(reconstructed_skeleton[:,:17,:])
-
-            min_middle = torch.min(middle_out)
-            max_middle = torch.max(middle_out)
-            middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
-
-            #Show 2djoints heatmap
-            array = middle_out[0,0,:,:].detach().numpy()
-            #print(np.max(array), np.min(array))
-            if show:
-                plt.imshow(array,cmap='hot')
-                plt.colorbar()
-                plt.show()
-            
-
-            #print(np.shape(joints2d_list))
-            heatmap = create_heatmap(joint3d, np.shape(middle_out)[2])
-            if show and False:
-                plt.imshow(heatmap[0,0,:,:], cmap='hot')
-                plt.colorbar()
-                plt.show()
-
-            loss = criterion(output, global_pos, middle_out, joint2d)
-            # loss = criterion(output, joint3d, middle_out, joint2d)
+            if temp == 5:
+                temp = 0
+                show_skeleton(global_pos[:,:17,:])
+                show_skeleton(reconstructed_skeleton[:,:17,:])
+                show_skeleton(output[:,:17,:].detach().numpy())
+            temp += 1
+            loss = criterion(output, global_pos, joint2d)
+            print("LOSS",loss.item())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -284,19 +136,10 @@ def main(args):
             # joint2d,joint3d, image_bv = data
             joint2d,joint3d, image_bv, global_pos_v, min2d, max2d, min3d, max3d = data
 
-            image = torch.from_numpy(images_crop(image_bv, global_pos_v, joint3d)).float()
             #print(np.shape(image))
-            val_output, middle_out = model(image)
-            
-            min_middle = torch.min(middle_out)
-            max_middle = torch.max(middle_out)
-            middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
+            val_output = model(joint2d)
 
-            heatmap = create_heatmap(joint3d, np.shape(middle_out)[2])
-
-
-            loss_val = criterion(val_output, global_pos, middle_out, joint2d)
-            # loss_val = criterion(val_output, joint3d, middle_out, joint2d)
+            loss_val = criterion(val_output, global_pos, joint2d)
             print("LOSSSSSSSSVAAAL",loss_val.item())
         # Getting all memory using os.popen()
         total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])

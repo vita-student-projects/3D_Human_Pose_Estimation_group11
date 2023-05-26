@@ -355,7 +355,7 @@ if __name__ == '__main__':
         cap.release()
 
         frame = frame
-        print(np.max(frame))
+        print("MAXMAXX",np.max(frame))
 
         image_new = images_crop(frame)
         detected = False
