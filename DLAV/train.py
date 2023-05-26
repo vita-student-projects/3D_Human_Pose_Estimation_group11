@@ -21,8 +21,118 @@ import matplotlib.pyplot as plt
 import cv2
 from scipy.ndimage import gaussian_filter
 from scipy.stats import multivariate_normal
-import h5py  
+import h5py 
+from HEMlets.table import *
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.gridspec as gridspec
+import imageio_ffmpeg
 
+def draw_plots(joints, img, joints_gt):
+    fig = plt.figure( figsize=(19.2 / 2, 10.8 / 2) )
+    gs1 = gridspec.GridSpec(1, 3) # 6 rows, 10 columns
+    gs1.update(left=0.08, right=0.98,top=0.95,bottom=0.08,wspace=0.05, hspace=0.1)
+
+    font = {'family' : 'serif',  
+        'color'  : 'darkred',  
+        'weight' : 'normal',  
+        'size'   : 10,  
+            }
+    
+    axImg=plt.subplot(gs1[0,0])
+    axImg.axis('off')
+    # axImg.set_title('Input Image' )#,fontdict=font)
+
+    axPose3d_gt=plt.subplot(gs1[0,1],projection='3d')
+    axPose3d_pred=plt.subplot(gs1[0,2],projection='3d')
+    img = np.transpose(img, (1,2,0))
+    img = ((img * img_std) + img_mean).detach().numpy().astype(np.uint8)
+    
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    axImg.imshow(img)
+    axImg.axis('off')
+
+    Draw3DSkeleton(joints, axPose3d_pred,JOINT_CONNECTIONS,'Pred_joint3d',fontdict=font,j18_color=JOINT_COLOR_INDEX,image = None)
+    print(np.shape(joints_gt), np.shape(joints))
+    gt_exp = np.zeros((1, 18, 3))
+    gt_exp[:, :17, :] = joints_gt
+    gt_exp[:,17,:] = joints_gt[:,7,:]
+    Draw3DSkeleton(gt_exp,axPose3d_gt,JOINT_CONNECTIONS,'GT_joint3d',fontdict=font,j18_color=JOINT_COLOR_INDEX,image = None)
+    plt.show()
+def Draw3DSkeleton(channels,ax,edge,Name=None,fontdict=None,j18_color  = None,image = None):
+    edge = np.array(edge)
+    I    = edge[:,0]
+    J    = edge[:,1]
+    LR  = np.ones((edge.shape[0]),dtype=np.int)
+    colors = [(0,0,1.0),(0,1.0,0),(1.0,0,0)]
+    vals = np.reshape( channels, (-1, 3) )
+
+    vals[:] = vals[:] - vals[0]
+
+    ax.cla()
+    ax.view_init(azim=-136,elev=-157)
+    ax.invert_yaxis()
+
+    for i in np.arange( len(I) ):
+        x,y,z = [np.array([vals[I[i],j],vals[J[i],j]]) for j in range(3)]
+        ax.plot(x, -z, y, lw=2, c=colors[j18_color[i]])
+
+    for i in range(16):
+        ax.plot([vals[i,0],vals[i,0]+1],[-vals[i,2],-vals[i,2]],[vals[i,1],vals[i,1]],lw=3,c=(0.0,0.8,0.0))		
+
+    xroot, yroot, zroot = vals[0,0], vals[0,1], vals[0,2]
+    maxAxis = np.max(vals,axis=0)
+    minAxis = np.min(vals,axis=0)
+    # max_size = np.max(maxAxis-minAxis) / 2 * 1.1
+    
+    # ax.set_xlim3d([-max_size + xroot, max_size + xroot])
+    # ax.set_ylim3d([-max_size + zroot, max_size + zroot])
+    # ax.set_zlim3d([-max_size + yroot, max_size + yroot])
+    
+    max_size = 130
+    ax.set_xlim3d([-max_size , max_size ])
+    ax.set_ylim3d([-max_size , max_size ])
+    ax.set_zlim3d([-max_size , max_size ])
+    #print max_size,vals
+    if False:
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
+
+    # Get rid of the ticks and tick labels
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    # ax.set_zticks([])
+
+    # ax.get_xaxis().set_ticklabels([])
+    # ax.get_yaxis().set_ticklabels([])
+    # ax.set_zticklabels([])
+    # ax.set_aspect('equal')
+
+
+
+    # px = np.arange(-max_size + xroot, max_size + xroot, 3)   
+    # pz = np.arange(-max_size + zroot, max_size + zroot, 3)     
+    # px, pz = np.meshgrid(px,pz)   
+
+    # py = np.zeros((px.shape[0],px.shape[1]),dtype=float)
+    # py[:,:]=vals[:,1].max()
+
+    # #print px.shape,pz.shape,py.shape
+    # ax.axis('off')
+    # surf = ax.plot_surface(px, pz, py,color='gray',alpha=0.5)   
+
+    if Name is not None :
+        ax.set_title(Name,fontdict=fontdict)
+    # ax.set_aspect('equal')
+
+def from_normjoint_to_cropspace(joint3d):
+    temp = np.zeros_like(joint3d)
+    temp = np.copy(joint3d)
+    temp[:,:,:2] = (temp[:,:,:2] + 0.5 )*256.0
+
+    temp[:,:,2]*=128
+
+    return temp
 
 def create_heatmap(joint3d, middle_out_size):
     heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joint3d)[1], middle_out_size, middle_out_size))
@@ -66,8 +176,9 @@ def show_skeleton(joints):
         sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
         for j in range(17):
             ax.plot(xdata[sk_points[j]], ydata[sk_points[j]], zdata[sk_points[j]] , "b" )
-        plt.xlim([-1.5, 1.5])
-        plt.ylim([-1.5, 1.5])
+        # plt.xlim([-1.5, 1.5])
+        # plt.ylim([-1.5, 1.5])
+        ax.invert_zaxis()
         plt.show()
 def inverse_norm(skeleton, min3d, max3d):
     skeleton = skeleton.detach().numpy()
@@ -86,6 +197,8 @@ def inverse_norm(skeleton, min3d, max3d):
 
 
 def images_crop(images, global_pos, joint3d):
+    img_mean = np.array([123.675,116.280,103.530])
+    img_std = np.array([58.395,57.120,57.375])
     net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
     model_crop = cv2.dnn_DetectionModel(net)
     #Resize into a small square (320,320) to process a fast analysis
@@ -99,17 +212,17 @@ def images_crop(images, global_pos, joint3d):
             class_name = class_name.strip()
             classes.append(class_name)
 
-    res_cropped = np.zeros(np.shape(np.transpose(images, (0,3,2,1))))
+    res_cropped = np.zeros(np.shape(images))
     for i in range(np.shape(images)[0]):
-        image=(np.array(np.transpose(images[i,:,:,:].detach().numpy())))
-        image=image*255
+        image=(np.array(images[i,:,:,:].detach().numpy()))
+        image= (image*img_std) + img_mean
         image = image.astype(np.uint8)
 
-        (class_ids, score, bound_boxes) = model_crop.detect(np.transpose(image)) 
+        (class_ids, score, bound_boxes) = model_crop.detect(image)
         # plt.imshow(np.transpose(images[i,:,:,:]))
         # plt.show()
         image = image.astype(np.float)
-        image = image / 255
+        image = np.divide(image - img_mean, img_std)
 
         for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
             x, y, w, h = bound_boxes
@@ -142,14 +255,8 @@ def images_crop(images, global_pos, joint3d):
                     high = y - diff + w + add
                     high = np.clip(high, 0, original_y)
                     cropped = image[low:high,np.clip(x-add, 0, 256):np.clip(x+w+add, 0, 256),:]
-                res_cropped[i,:,:,:] = np.transpose(cv2.resize((cropped), (256,256)))
+                res_cropped[i,:,:,:] = (cv2.resize((cropped), (256,256)))
                 break
-        
-
-        x = global_pos[i,:, 2]
-        y = global_pos[i,:, 0]
-        z = -global_pos[i,:, 1]
-        print(np.shape(global_pos))
        
         # show_skeleton(global_pos)
         
@@ -162,22 +269,7 @@ def main(args):
     f.close()
     f = open("checkpoints/loss_val.txt", "w")
     f.close()
-
-    # Set up dataset and data loader
-    tiny_dataset = '../data/S11/S_11_C_4_1.h5'
-    img_mean = np.array([123.675,116.280,103.530])
-    img_std = np.array([58.395,57.120,57.375])
-    file = h5py.File(tiny_dataset, 'r')
     
-    img = file['images']
-    img = np.divide((img - img_mean), img_std)
-    img = np.transpose(img, (0,3,1,2)) #WORKS
-    # img = np.transpose(img, (0,2,1,3))
-    print("GOOOD_SHAPE",np.shape(img))
-    # np.transpose(image,(2,0,1))
-    
-    print("IMASDhbfJSbf", np.shape(img))
-     
     #train_dataset = H36M(args.dataset_path, split='val')
     train_dataset = H36M(args.batch_size)
 
@@ -217,7 +309,18 @@ def main(args):
         for (idx, data) in enumerate(train):
 
             joint2d,joint3d, image_b, global_pos, min2d, max2d, min3d, max3d = data
+            # joints[:,2] = joints[:,2] / 255.0 - 0.5
+            # joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
 
+            # global_pos = global_pos[:,:,[2,0,1]]
+            # global_pos[:,:,2] = global_pos[:,:,2]/255.0 - 0.5
+            # global_pos[:,:,0:2] = global_pos[:,:,0:2]/256.0 - 0.5
+
+            # joint3d = joint3d[:,:,[2,0,1]]
+            # joint3d[:,:,2] = joint3d[:,:,2]/255.0 - 0.5
+            # joint3d[:,:,0:2] = joint3d[:,:,0:2]/256.0 - 0.5
+
+            show_skeleton(global_pos)
             image = torch.from_numpy(images_crop(image_b, global_pos, joint3d)).float()
 
             #Show which 2d joints are important
@@ -251,30 +354,42 @@ def main(args):
             # plt.show()
 
             optimizer.zero_grad()
-            image = np.transpose(image, (0,1,3,2))
+            image = np.transpose(image, (0,3,1,2))
             image_b = np.transpose(image_b, (0,3,1,2))
             image_b = (image_b).float()
-            print("OURs / crop / REAL", np.shape(image), np.shape(image_b), np.shape(torch.tensor(img[0:1])))
 
             output, middle_out = model(image_b)
-            show_skeleton(output[:,:17,:].detach().numpy())
-            plt.imshow(np.transpose(img[0], (1,2,0)))
-            plt.show()
+            output = from_normjoint_to_cropspace(output)
+            global_pos[:,:,0] = global_pos[:,:,0]
+            global_pos = global_pos[:,:,[1,2,0]]
+            global_pos[:,:,1] = global_pos[:,:,1]
+            global_pos[:,:,2] = global_pos[:,:,2]
+            gt_joints = from_normjoint_to_cropspace(global_pos)
+            draw_plots(output, image_b[0], gt_joints)
+            draw_plots(output, image_b[0], from_normjoint_to_cropspace(joint3d[:,:,[1,2,0]]))
+
+            # show_skeleton(output[:,:17,:].detach().numpy())
+            output, middle_out = model(image)
+            output = from_normjoint_to_cropspace(output)
+            gt_joints = from_normjoint_to_cropspace(global_pos)
+            draw_plots(output, image[0], gt_joints)
+
+            # show_skeleton(output[:,:17,:].detach().numpy())
+
             # print(np.max(image))
-            print("ICI",np.max(img), np.min(img))
             print("ICI2", torch.max(image), torch.min(image))
             print("ICI3", torch.max(image_b), torch.min(image_b))
+           
+            output = from_normjoint_to_cropspace(output)
+            gt_joints = from_normjoint_to_cropspace(global_pos)
 
-            plt.imshow(np.transpose(image_b[0], (1,2,0)))
-            plt.show()
-            output, middle_out = model(torch.tensor(img[0:1]).float())
-            # Extracting x, y, and z coordinates
-            reconstructed_skeleton = inverse_norm(output, min3d, max3d)
-            reconstructed_global_pos = inverse_norm(global_pos, min3d, max3d)
-            show_skeleton(global_pos[:,:17,:])
-            show_skeleton(output[:,:17,:].detach().numpy())
-            show_skeleton(reconstructed_global_pos[:,:17,:])
-            show_skeleton(reconstructed_skeleton[:,:17,:])
+            # # Extracting x, y, and z coordinates
+            # reconstructed_skeleton = inverse_norm(output, min3d, max3d)
+            # reconstructed_global_pos = inverse_norm(global_pos, min3d, max3d)
+            # show_skeleton(global_pos[:,:17,:])
+            # show_skeleton(output[:,:17,:].detach().numpy())
+            # show_skeleton(reconstructed_global_pos[:,:17,:])
+            # show_skeleton(reconstructed_skeleton[:,:17,:])
 
             min_middle = torch.min(middle_out)
             max_middle = torch.max(middle_out)
@@ -322,6 +437,7 @@ def main(args):
 
             image = torch.from_numpy(images_crop(image_bv, global_pos_v, joint3d)).float()
             #print(np.shape(image))
+            image = np.transpose(image, (0,3,1,2))
             val_output, middle_out = model(image)
             
             min_middle = torch.min(middle_out)
@@ -329,7 +445,6 @@ def main(args):
             middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
 
             heatmap = create_heatmap(joint3d, np.shape(middle_out)[2])
-
 
             loss_val = criterion(val_output, global_pos, middle_out, joint2d)
             # loss_val = criterion(val_output, joint3d, middle_out, joint2d)
