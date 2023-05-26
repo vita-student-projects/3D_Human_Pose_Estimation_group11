@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 import cv2
 from scipy.ndimage import gaussian_filter
 from scipy.stats import multivariate_normal
+import h5py  
+
 
 def create_heatmap(joint3d, middle_out_size):
     heatmap = np.zeros((np.shape(joint3d)[0], np.shape(joint3d)[1], middle_out_size, middle_out_size))
@@ -154,6 +156,7 @@ def images_crop(images, global_pos, joint3d):
     return res_cropped
 def main(args):
     show = False
+    trainable = False
     #Files to save the losses
     f = open("checkpoints/loss_train.txt", "w")
     f.close()
@@ -162,6 +165,18 @@ def main(args):
 
     # Set up dataset and data loader
     tiny_dataset = '../data/S11/S_11_C_4_1.h5'
+    img_mean = np.array([123.675,116.280,103.530])
+    img_std = np.array([58.395,57.120,57.375])
+    file = h5py.File(tiny_dataset, 'r')
+    
+    img = file['images']
+    img = np.divide((img - img_mean), img_std)
+    img = np.transpose(img, (0,3,1,2)) #WORKS
+    # img = np.transpose(img, (0,2,1,3))
+    print("GOOOD_SHAPE",np.shape(img))
+    # np.transpose(image,(2,0,1))
+    
+    print("IMASDhbfJSbf", np.shape(img))
      
     #train_dataset = H36M(args.dataset_path, split='val')
     train_dataset = H36M(args.batch_size)
@@ -175,8 +190,12 @@ def main(args):
     model = Network(config)
 
     #Load the pretrained network
-    #model.load_state_dict(torch.load("../ckpt/hemlets_h36m_lastest.pth", map_location = torch.device('cpu')))
-    
+    model.load_state_dict(torch.load("../ckpt/hemlets_h36m_lastest.pth", map_location = torch.device('cpu')))
+
+    if not trainable:
+        for param in model.parameters():
+            param.requires_grad = False
+
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     # Set up loss function
@@ -232,7 +251,23 @@ def main(args):
             # plt.show()
 
             optimizer.zero_grad()
-            output, middle_out = model(image)
+            image = np.transpose(image, (0,1,3,2))
+            image_b = np.transpose(image_b, (0,3,1,2))
+            image_b = (image_b).float()
+            print("OURs / crop / REAL", np.shape(image), np.shape(image_b), np.shape(torch.tensor(img[0:1])))
+
+            output, middle_out = model(image_b)
+            show_skeleton(output[:,:17,:].detach().numpy())
+            plt.imshow(np.transpose(img[0], (1,2,0)))
+            plt.show()
+            # print(np.max(image))
+            print("ICI",np.max(img), np.min(img))
+            print("ICI2", torch.max(image), torch.min(image))
+            print("ICI3", torch.max(image_b), torch.min(image_b))
+
+            plt.imshow(np.transpose(image_b[0], (1,2,0)))
+            plt.show()
+            output, middle_out = model(torch.tensor(img[0:1]).float())
             # Extracting x, y, and z coordinates
             reconstructed_skeleton = inverse_norm(output, min3d, max3d)
             reconstructed_global_pos = inverse_norm(global_pos, min3d, max3d)
@@ -263,9 +298,10 @@ def main(args):
 
             loss = criterion(output, global_pos, middle_out, joint2d)
             # loss = criterion(output, joint3d, middle_out, joint2d)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            if trainable:
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
             print('Train Epoch: {} [(%)]\tLoss: {:.6f}'.format(
                     epoch, loss.item()))

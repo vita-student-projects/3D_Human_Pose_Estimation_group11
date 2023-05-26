@@ -225,6 +225,7 @@ class H36M(Dataset):
                 #print(np.shape(self.frame), self.frame)
                 # self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
                 # self.frame = self.frame * img_std + img_mean
+                self.frame = np.divide(self.frame - img_mean, img_std)
                 print("IMAGESASDDS VFS", np.max(self.frame), np.min(self.frame))
             else :
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
@@ -232,13 +233,14 @@ class H36M(Dataset):
                 # print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
                 # self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
                 # self.frame = (self.frame - img_mean) / img_std 
-            
+                self.frame = np.divide(self.frame - img_mean, img_std)
+
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
         #resising the image for Resnet
         self.frame = cv2.resize(self.frame, (256, 256))
 
         #self.frame = self.frame/256.0
-        return keypoints_2d, self.dataset3d[idx], self.frame.astype(np.uint8), self.global_pos[idx], self.min2d[idx], self.max2d[idx], self.min3d[idx], self.max3d[idx] #cam 0 
+        return keypoints_2d, self.dataset3d[idx], self.frame.astype(np.float), self.global_pos[idx], self.min2d[idx], self.max2d[idx], self.min3d[idx], self.max3d[idx] #cam 0 
 
         
     def process_data(self, dataset , sample=sample, is_train = True, standardize = False, z_c = zero_centre) :
