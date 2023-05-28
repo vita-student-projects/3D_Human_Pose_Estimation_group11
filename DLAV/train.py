@@ -263,7 +263,7 @@ def images_crop(images, global_pos, joint3d):
     return res_cropped
 def main(args):
     show = False
-    trainable = False
+    trainable = True
     #Files to save the losses
     f = open("checkpoints/loss_train.txt", "w")
     f.close()
@@ -313,8 +313,8 @@ def main(args):
             # joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
 
             # global_pos = global_pos[:,:,[2,0,1]]
-            # global_pos[:,:,2] = global_pos[:,:,2]/255.0 - 0.5
-            # global_pos[:,:,0:2] = global_pos[:,:,0:2]/256.0 - 0.5
+            global_pos[:,:,2] = global_pos[:,:,2]/255.0 - 0.5
+            global_pos[:,:,0:2] = global_pos[:,:,0:2]/256.0 - 0.5
 
             # joint3d = joint3d[:,:,[2,0,1]]
             # joint3d[:,:,2] = joint3d[:,:,2]/255.0 - 0.5
@@ -359,38 +359,23 @@ def main(args):
             image_b = (image_b).float()
 
             output, middle_out = model(image_b)
-            output = from_normjoint_to_cropspace(output)
+            if not trainable:
+                output = from_normjoint_to_cropspace(output)
+            global_pos = global_pos[:,:,[0,2,1]]
             global_pos[:,:,0] = global_pos[:,:,0]
-            global_pos = global_pos[:,:,[1,2,0]]
-            global_pos[:,:,1] = global_pos[:,:,1]
+            global_pos[:,:,1] = -global_pos[:,:,1]
             global_pos[:,:,2] = global_pos[:,:,2]
-            gt_joints = from_normjoint_to_cropspace(global_pos)
-            draw_plots(output, image_b[0], gt_joints)
-            draw_plots(output, image_b[0], from_normjoint_to_cropspace(joint3d[:,:,[1,2,0]]))
+            gt_joints = from_normjoint_to_cropspace(global_pos)*128
+            if not trainable:
+                draw_plots(output, image_b[0], gt_joints)
 
             # show_skeleton(output[:,:17,:].detach().numpy())
             output, middle_out = model(image)
-            output = from_normjoint_to_cropspace(output)
-            gt_joints = from_normjoint_to_cropspace(global_pos)
-            draw_plots(output, image[0], gt_joints)
-
-            # show_skeleton(output[:,:17,:].detach().numpy())
-
-            # print(np.max(image))
-            print("ICI2", torch.max(image), torch.min(image))
-            print("ICI3", torch.max(image_b), torch.min(image_b))
+            if not trainable:
+                output = from_normjoint_to_cropspace(output)
+                gt_joints = from_normjoint_to_cropspace(global_pos)
+                draw_plots(output, image[0], gt_joints)
            
-            output = from_normjoint_to_cropspace(output)
-            gt_joints = from_normjoint_to_cropspace(global_pos)
-
-            # # Extracting x, y, and z coordinates
-            # reconstructed_skeleton = inverse_norm(output, min3d, max3d)
-            # reconstructed_global_pos = inverse_norm(global_pos, min3d, max3d)
-            # show_skeleton(global_pos[:,:17,:])
-            # show_skeleton(output[:,:17,:].detach().numpy())
-            # show_skeleton(reconstructed_global_pos[:,:17,:])
-            # show_skeleton(reconstructed_skeleton[:,:17,:])
-
             min_middle = torch.min(middle_out)
             max_middle = torch.max(middle_out)
             middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
