@@ -27,6 +27,61 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.gridspec as gridspec
 import imageio_ffmpeg
 
+def plot_losses(training_loss, validation_loss, training_MPJPE, val_MPJPE):
+    train_epochs = []
+    train_losses = []
+    val_epochs = []
+    val_losses = []
+    MPJPE_train_epochs=[]
+    MPJPE_val_epochs=[]
+    MPJPE_train=[]
+    MPJPE_val=[]
+
+    with open(training_loss, 'r') as train_file:
+        for line in train_file:
+            epoch, loss = line.strip().split(',')
+            train_epochs.append(int(epoch))
+            train_losses.append(float(loss))
+
+    with open(validation_loss, 'r') as val_file:
+        for line in val_file:
+            epoch, loss = line.strip().split(',')
+            val_epochs.append(int(epoch))
+            val_losses.append(float(loss))
+            
+    with open(training_MPJPE, 'r') as val_file:
+        for line in val_file:
+            epoch, loss = line.strip().split(',')
+            MPJPE_train_epochs.append(int(epoch))
+            MPJPE_train.append(float(loss))
+            
+    with open(val_MPJPE, 'r') as val_file:
+        for line in val_file:
+            epoch, loss = line.strip().split(',')
+            MPJPE_val_epochs.append(int(epoch))
+            MPJPE_val.append(float(loss))
+
+    plt.figure()
+    plt.plot(train_epochs, train_losses, label='Training Loss')
+    plt.plot(val_epochs, val_losses, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Losses')
+    plt.legend()
+    name="LossPlots.png"
+    plt.savefig(name)
+    
+    plt.figure()
+    plt.plot(MPJPE_train_epochs, MPJPE_train, label='Training MPJPE')
+    plt.plot(MPJPE_val_epochs, MPJPE_val, label='Validation MPJPE')
+    plt.xlabel('Epoch')
+    plt.ylabel('MPJPE')
+    plt.title('Training and Validation MPJPE')
+    plt.legend()
+    name="MPJPE_Plots.png"
+    plt.savefig(name)
+    plt.show()
+
 def draw_plots(joints, img, joints_gt):
     fig = plt.figure( figsize=(19.2 / 2, 10.8 / 2) )
     gs1 = gridspec.GridSpec(1, 3) # 6 rows, 10 columns
@@ -52,7 +107,7 @@ def draw_plots(joints, img, joints_gt):
     axImg.axis('off')
 
     Draw3DSkeleton(joints, axPose3d_pred,JOINT_CONNECTIONS,'Pred_joint3d',fontdict=font,j18_color=JOINT_COLOR_INDEX,image = None)
-    print(np.shape(joints_gt), np.shape(joints))
+    # print(np.shape(joints_gt), np.shape(joints))
     gt_exp = np.zeros((1, 18, 3))
     gt_exp[:, :17, :] = joints_gt
     gt_exp[:,17,:] = joints_gt[:,7,:]
@@ -64,10 +119,16 @@ def Draw3DSkeleton(channels,ax,edge,Name=None,fontdict=None,j18_color  = None,im
     J    = edge[:,1]
     LR  = np.ones((edge.shape[0]),dtype=np.int)
     colors = [(0,0,1.0),(0,1.0,0),(1.0,0,0)]
-    vals = np.reshape( channels, (-1, 3) )
+    if (torch.is_tensor(channels)):
+        temp = channels.clone()
+        temp = temp.detach().numpy()
+
+        vals = np.reshape(temp, (-1, 3) )
+    else:
+        vals = np.reshape(channels, (-1, 3) )
 
     vals[:] = vals[:] - vals[0]
-
+    # print("VLAS",vals)
     ax.cla()
     ax.view_init(azim=-136,elev=-157)
     ax.invert_yaxis()
@@ -269,7 +330,11 @@ def main(args):
     f.close()
     f = open("checkpoints/loss_val.txt", "w")
     f.close()
-    
+    f = open("checkpoints/MPJPE_val.txt", "w")
+    f.close()
+    f = open("checkpoints/MPJPE_train.txt", "w")
+    f.close() 
+
     #train_dataset = H36M(args.dataset_path, split='val')
     train_dataset = H36M(args.batch_size)
 
@@ -287,6 +352,9 @@ def main(args):
     if not trainable:
         for param in model.parameters():
             param.requires_grad = False
+    else:
+        for param in model.parameters():
+            param.requires_grad = True
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
@@ -320,7 +388,6 @@ def main(args):
             # joint3d[:,:,2] = joint3d[:,:,2]/255.0 - 0.5
             # joint3d[:,:,0:2] = joint3d[:,:,0:2]/256.0 - 0.5
 
-            show_skeleton(global_pos)
             image = torch.from_numpy(images_crop(image_b, global_pos, joint3d)).float()
 
             #Show which 2d joints are important
@@ -358,19 +425,28 @@ def main(args):
             image_b = np.transpose(image_b, (0,3,1,2))
             image_b = (image_b).float()
 
-            output, middle_out = model(image_b)
-            if not trainable:
-                output = from_normjoint_to_cropspace(output)
-            global_pos = global_pos[:,:,[0,2,1]]
-            global_pos[:,:,0] = global_pos[:,:,0]
-            global_pos[:,:,1] = -global_pos[:,:,1]
-            global_pos[:,:,2] = global_pos[:,:,2]
-            gt_joints = from_normjoint_to_cropspace(global_pos)*128
-            if not trainable:
-                draw_plots(output, image_b[0], gt_joints)
+            # output, middle_out = model(image_b)
+            # if not trainable:
+            #     output = from_normjoint_to_cropspace(output)
+            # global_pos = global_pos[:,:,[0,2,1]]
+            # global_pos[:,:,0] = global_pos[:,:,0]
+            # global_pos[:,:,1] = -global_pos[:,:,1]
+            # global_pos[:,:,2] = global_pos[:,:,2]
+            # gt_joints = from_normjoint_to_cropspace(global_pos)*128
+
+            # if not trainable:
+            #     draw_plots(output, image_b[0], gt_joints)
 
             # show_skeleton(output[:,:17,:].detach().numpy())
             output, middle_out = model(image)
+            # output = from_normjoint_to_cropspace(output)
+            output[:,:,:2] = (output[:,:,:2] + 0.5)*256.0
+            output[:,:,2] *= 128
+
+            global_pos = global_pos[:,:,[0,2,1]]
+            global_pos[:,:,1] = -global_pos[:,:,1]
+            gt_joints = from_normjoint_to_cropspace(global_pos) * 128
+            draw_plots(output, image[0], gt_joints)
             if not trainable:
                 output = from_normjoint_to_cropspace(output)
                 gt_joints = from_normjoint_to_cropspace(global_pos)
@@ -396,7 +472,8 @@ def main(args):
                 plt.colorbar()
                 plt.show()
 
-            loss = criterion(output, global_pos, middle_out, joint2d)
+            loss, MPJPE_train = criterion(output, gt_joints, middle_out, joint2d)
+            
             # loss = criterion(output, joint3d, middle_out, joint2d)
             if trainable:
                 optimizer.zero_grad()
@@ -424,14 +501,19 @@ def main(args):
             #print(np.shape(image))
             image = np.transpose(image, (0,3,1,2))
             val_output, middle_out = model(image)
-            
             min_middle = torch.min(middle_out)
             max_middle = torch.max(middle_out)
             middle_out = torch.divide(torch.subtract(middle_out, min_middle), max_middle - min_middle)
 
             heatmap = create_heatmap(joint3d, np.shape(middle_out)[2])
 
-            loss_val = criterion(val_output, global_pos, middle_out, joint2d)
+            val_output = from_normjoint_to_cropspace(val_output.detach().numpy())
+            global_pos = global_pos[:,:,[0,2,1]]
+            global_pos[:,:,1] = -global_pos[:,:,1]
+            gt_joints = from_normjoint_to_cropspace(global_pos) * 128
+
+
+            loss_val, MPJPE_val = criterion(val_output, gt_joints, middle_out, joint2d)
             # loss_val = criterion(val_output, joint3d, middle_out, joint2d)
             print("LOSSSSSSSSVAAAL",loss_val.item())
         # Getting all memory using os.popen()
@@ -454,7 +536,22 @@ def main(args):
             f.write(repr(epoch) + ", " + repr(loss_val.item()) + "\n")
             f.close()
 
-      
+        if (epoch+1  == args.epochs):
+            print("DONE")
+            training_filename = 'checkpoints/loss_train.txt'  # Replace with your training loss file name
+            validation_filename = 'checkpoints/loss_val.txt'  # Replace with your validation loss file name
+            val_MPJPE_file = 'checkpoints/MPJPE_val.txt'  # Replace with your validation loss file name
+            train_MPJPE_file = 'checkpoints/MPJPE_train.txt'  # Replace with your validation loss file name
+            plot_losses(training_filename, validation_filename,train_MPJPE_file,val_MPJPE_file)
+
+            f = open("checkpoints/MPJPE_train.txt", "a")
+            f.write(repr(epoch) + ", " + repr(MPJPE_train) + "\n")
+            f.close()
+            
+            f = open("checkpoints/MPJPE_val.txt", "a")
+            f.write(repr(epoch) + ", " + repr(MPJPE_val) + "\n")
+            f.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train HEMletsPose model')

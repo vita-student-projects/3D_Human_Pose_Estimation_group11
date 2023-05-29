@@ -145,7 +145,7 @@ class Network(torch.nn.Module):
         volume = self.conv_tail(feature_cat)
         # print('volume', volume.shape)
         joint3d = self.volume_reg(volume)
-       
+
         return joint3d, fb_map
 
 

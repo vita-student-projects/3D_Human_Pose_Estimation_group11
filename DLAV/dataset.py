@@ -258,7 +258,7 @@ class H36M(Dataset):
             min3d = np.min(dataset, axis = (1))
             max3d_exp = np.expand_dims(max3d, axis=1)
             min3d_exp = np.expand_dims(min3d, axis=1)
-            # dataset = (dataset- min3d_exp)/(max3d_exp - min3d_exp)
+            dataset = (dataset- min3d_exp)/(max3d_exp - min3d_exp)
             return dataset, min3d_exp, max3d_exp
         else:
             max2d = np.zeros((np.shape(dataset)[0], np.shape(dataset)[2]))
@@ -268,7 +268,7 @@ class H36M(Dataset):
             min2d = np.min(dataset, axis = (1))
             max2d_exp = np.expand_dims(max2d, axis=1)
             min2d_exp = np.expand_dims(min2d, axis=1)
-            # dataset = (dataset- min2d_exp)/(max2d_exp - min2d_exp)
+            dataset = (dataset- min2d_exp)/(max2d_exp - min2d_exp)
 
             return dataset, min2d_exp, max2d_exp
             return dataset

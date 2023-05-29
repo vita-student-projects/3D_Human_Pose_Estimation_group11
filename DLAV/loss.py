@@ -24,19 +24,30 @@ class MPJPE_Loss(nn.Module):
         LHEM = 0
         l3D = 0
 
+        joints = joints - joints[:,0,:]
+        joints = torch.Tensor(joints)
+        pred = torch.Tensor(pred)
+        if pred.requires_grad:
+            print("GRAD")
+        # pred.requires_grad = True
+        # joints.requires_grad_()
+        pred = pred - pred[:,0,:]
+        print("JOINTS", joints, pred)
+        print(type(pred), type(joints), joints.size())
+        print(joints.size()[0])
         #HEMlets loss
 
         #L3D_lambda
-        if np.shape(joints)[2] == 2:
+        if joints.size()[2] == 2:
             l3D = torch.mean(torch.abs(joints[:,:,0] - pred[:,:,0]) + torch.abs(joints[:,:,1] - pred[:,:,1]))
-        elif np.shape(joints)[2] == 3:
+        elif joints.size()[2] == 3:
             #Loss from paper
             l3D = torch.mean(torch.sum(torch.abs(joints - pred[:,:17,:]), axis = (1,2)))
            
         #L2D
         #If only Human3.6M, stops at 17
         #If MPII remove 7th, 8th and 9th and add 18th
-        H_lay = middle_out[:,:np.shape(joints)[1], :, :]
+        H_lay = middle_out[:,:joints.size()[1], :, :]
         heatmap_2d = self.create_heatmap(joint2d, np.shape(H_lay)[2])      
         diff = torch.sub(H_lay, torch.from_numpy(heatmap_2d)).detach().numpy()
         L2D = np.mean(np.sum(np.linalg.norm(diff, axis=(2,3))**2, axis = 1))
@@ -81,8 +92,10 @@ class MPJPE_Loss(nn.Module):
         loss = l3D + Lint
         print("l3D",l3D.item())
         print("loss", loss.item())
-
-        return loss
+        MPJPE_Val=self.MPJPE(joints, pred)
+        if loss.requires_grad:
+            print("ONJDSNKDS")
+        return loss , MPJPE_Val
     
     def heatmap_triplets(self, zp, zc, heatmap_p, heatmap_c):
         #Check if the child is behind or ahead
@@ -130,3 +143,14 @@ class MPJPE_Loss(nn.Module):
                 # plt.show()
         return heatmap
 
+    def MPJPE(self, gnd_truth, estimation):
+            
+        gnd_truth=gnd_truth.detach().numpy()
+        estimation=estimation.detach().numpy()
+        
+        # MPJPE= np.mean(gnd_truth[:,0:17,:]-estimation[:,0:17,:])
+        # print("GROUND TRUTH: ",gnd_truth[:,0:17,:])
+        # print("GROUND TRUTH: ",estimation[:,0:17,:])
+        
+        MPJPE=np.average(np.sqrt(np.sum(np.square(gnd_truth[:,0:17,:] - estimation[:,0:17,:]),axis=-1))) 
+        return MPJPE
