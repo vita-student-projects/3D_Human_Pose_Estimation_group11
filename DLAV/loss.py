@@ -23,15 +23,20 @@ class MPJPE_Loss(nn.Module):
         L2D = 0
         LHEM = 0
         l3D = 0
-
-        joints = joints - joints[:,0,:]
+        
         joints = torch.Tensor(joints)
         pred = torch.Tensor(pred)
+        # for i in range(joints.size()[0]):
+        #     joints[i,:,:] = joints[i,:,:] - joints[i,0,:]
+        #     pred[i,:,:] = pred[i,:,:] - pred[i,0,:]
+        joints = joints - joints[:, 0, :].unsqueeze(1)
+        pred = pred - pred[:, 0, :].unsqueeze(1)
+        
         if pred.requires_grad:
             print("GRAD")
         # pred.requires_grad = True
         # joints.requires_grad_()
-        pred = pred - pred[:,0,:]
+        
         print("JOINTS", joints, pred)
         print(type(pred), type(joints), joints.size())
         print(joints.size()[0])

@@ -325,6 +325,8 @@ def images_crop(images, global_pos, joint3d):
 def main(args):
     show = False
     trainable = True
+    enable_drawing = True
+    show_each = 1
     #Files to save the losses
     f = open("checkpoints/loss_train.txt", "w")
     f.close()
@@ -446,7 +448,11 @@ def main(args):
             global_pos = global_pos[:,:,[0,2,1]]
             global_pos[:,:,1] = -global_pos[:,:,1]
             gt_joints = from_normjoint_to_cropspace(global_pos) * 128
-            draw_plots(output, image[0], gt_joints)
+            if enable_drawing:
+                if (epoch-1) % show_each == 0:
+                    for i in range(np.shape(image)[0]):
+                        draw_plots(output[i:i+1,:,:], image[i], gt_joints[i:i+1,:,:])
+
             if not trainable:
                 output = from_normjoint_to_cropspace(output)
                 gt_joints = from_normjoint_to_cropspace(global_pos)
@@ -507,11 +513,21 @@ def main(args):
 
             heatmap = create_heatmap(joint3d, np.shape(middle_out)[2])
 
-            val_output = from_normjoint_to_cropspace(val_output.detach().numpy())
-            global_pos = global_pos[:,:,[0,2,1]]
-            global_pos[:,:,1] = -global_pos[:,:,1]
-            gt_joints = from_normjoint_to_cropspace(global_pos) * 128
+            # val_output = from_normjoint_to_cropspace(val_output)
+            val_output[:,:,:2] = (val_output[:,:,:2] + 0.5)*256.0
+            val_output[:,:,2] *= 128
 
+            global_pos_v[:,:,2] = global_pos_v[:,:,2]/255.0 - 0.5
+            global_pos_v[:,:,0:2] = global_pos_v[:,:,0:2]/256.0 - 0.5
+
+            global_pos_v = global_pos_v[:,:,[0,2,1]]
+            global_pos_v[:,:,1] = -global_pos_v[:,:,1]
+            gt_joints = from_normjoint_to_cropspace(global_pos_v) * 128
+            
+            if enable_drawing:
+                if (epoch-1) % show_each == 0:
+                    for i in range(np.shape(image)[0]):
+                        draw_plots(val_output[i:i+1,:,:], image[i], gt_joints[i:i+1,:,:])
 
             loss_val, MPJPE_val = criterion(val_output, gt_joints, middle_out, joint2d)
             # loss_val = criterion(val_output, joint3d, middle_out, joint2d)
@@ -536,6 +552,14 @@ def main(args):
             f.write(repr(epoch) + ", " + repr(loss_val.item()) + "\n")
             f.close()
 
+            f = open("checkpoints/MPJPE_train.txt", "a")
+            f.write(repr(epoch) + ", " + repr(MPJPE_train) + "\n")
+            f.close()
+            
+            f = open("checkpoints/MPJPE_val.txt", "a")
+            f.write(repr(epoch) + ", " + repr(MPJPE_val) + "\n")
+            f.close()
+
         if (epoch+1  == args.epochs):
             print("DONE")
             training_filename = 'checkpoints/loss_train.txt'  # Replace with your training loss file name
@@ -544,13 +568,7 @@ def main(args):
             train_MPJPE_file = 'checkpoints/MPJPE_train.txt'  # Replace with your validation loss file name
             plot_losses(training_filename, validation_filename,train_MPJPE_file,val_MPJPE_file)
 
-            f = open("checkpoints/MPJPE_train.txt", "a")
-            f.write(repr(epoch) + ", " + repr(MPJPE_train) + "\n")
-            f.close()
             
-            f = open("checkpoints/MPJPE_val.txt", "a")
-            f.write(repr(epoch) + ", " + repr(MPJPE_val) + "\n")
-            f.close()
 
 
 if __name__ == '__main__':
