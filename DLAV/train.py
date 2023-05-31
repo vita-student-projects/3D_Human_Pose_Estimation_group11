@@ -479,7 +479,7 @@ def main(args):
                 plt.show()
 
             loss, MPJPE_train = criterion(output, gt_joints, middle_out, joint2d)
-            
+            MPJPE_train = MPJPE_train * 10
             # loss = criterion(output, joint3d, middle_out, joint2d)
             if trainable:
                 optimizer.zero_grad()
@@ -530,6 +530,7 @@ def main(args):
                         draw_plots(val_output[i:i+1,:,:], image[i], gt_joints[i:i+1,:,:])
 
             loss_val, MPJPE_val = criterion(val_output, gt_joints, middle_out, joint2d)
+            MPJPE_val = MPJPE_val * 100
             # loss_val = criterion(val_output, joint3d, middle_out, joint2d)
             print("LOSSSSSSSSVAAAL",loss_val.item())
         # Getting all memory using os.popen()

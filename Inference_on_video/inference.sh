@@ -1,0 +1,1 @@
+python validate_evl.py --ckpt_path '../ckpt/hemlets_h36m_lastest.pth' --video_path '../data/test_set/test4_cut.mp4'
