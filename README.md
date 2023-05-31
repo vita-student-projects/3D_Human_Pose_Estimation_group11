@@ -111,6 +111,8 @@ We used the loss described in the paper (a mix of a the HEMlets loss which is ba
 ### Dataset
 We used the Human3.6M dataset for our work. It can be downloaded from SCITAS (in ```work/scitas-share/datasets/Vita/civil-459/h3.6```). 
 
+As the files where not properly uploaded on SCITAS, we tried many things: using the mini-dataset provided with the HEMlets paper, using another huamn3.6m on SCITAS (that uses CSV files, that we had to try and convert into something usable), etc... We where finaly able to use the data_2d_h36m.npz and the data_3d_h36m.npz files together with the videos. 
+The ```dataset.py``` file allows the user to choose if they wish to use the entire dataset or just a particular batch or scene. 
 
 ## Results
 
