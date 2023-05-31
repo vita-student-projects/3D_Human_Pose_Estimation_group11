@@ -114,9 +114,11 @@ We used the Human3.6M dataset for our work. It can be downloaded from SCITAS (in
 
 ## Results
 
-<img src="./images/img.png" width=786>
-<img src="./images/img1.png" width=500>
-<img src="./images/img2.png" width=500>
+Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the viedos provided for the class). Our YOLO extracts the people one by one and the network detects the 3D pose of each one of them. 
+
+<img src="./images/img.jpg" width=786>
+<img src="./images/img1.jpg" width=500>
+<img src="./images/img2.jpg" width=500>
 
 
 
