@@ -94,9 +94,9 @@ This would probably have been corrected if we would have had time to train our n
 ### Experimental setup
 In order to test our code we started by first training on a single image to see if we where able to overfit the results to the ground truth. This was done succesfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, wwhich is why we where not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
 
-We first tried to overfit the ground truth of an image in order to make sure our network was capable of doing this. We did this by training our network on top of the weights provided with the paper and from scratch. Both results where satisfying. 
+We first tried to overfit the ground truth of an image in order to make sure our network was capable of doing this. We did this by training our network on top of the weights provided with the paper and from scratch. Both results where satisfying. The following image shows the initialisation and the result of over fitting an image from scratch.
 
-<img src="./images/HEMlets_Us.png" width=786>
+<img src="./images/overfit.png" width=786>
 
 On the mini order to determine if our network is good we used the MPJPE metric (Mean Per Joint Position Error). 
 
