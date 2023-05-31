@@ -85,51 +85,57 @@ Some parameters can be modified in the .sh
 We were tasked to train a network to detect the 3D human pose. There are two options to do this: lifting a 2D skeleton into 3D, or using the entire image. We started by trying out the lifting and it seemed pretty simple. We therefore wanted to try the 3D human pose detection from the image directly. This task is more difficult than lifting, but there is less information loss, which makes it interesting. 
 
 ### Contribution
-As we had big difficulties finding the training code online, we wrote a training script based on the paper and on the inference provided with their Github Repo. In the original paper the authors flip the image and puts it in the network twice. They can then take the mean of both predictions to determine the 3D pose of the human detected. In our script we do not need to do this image flipping, allowing us to go twice as fast, which is what is needed for a real time application. In consequence, when we run our inference, with their weights, the skeleton is slightly diagonal.
+As we had big difficulties finding the training code online, we wrote a training script based on the paper and on the inference provided with their Github Repo. In the original paper the authors flip the image and puts it in the network twice. They can then take the mean of both predictions to determine the 3D pose of the human detected. In our script we do not do this image flipping, allowing us to go twice as fast, which is what is needed for a real time application but this is at the cost of loosing accuracy. In consequence, when we run our inference, with their weights, the skeleton is slightly diagonal.
 
 <img src="./images/HEMlets_Us.png" width=786>
 
 This would probably have been corrected if we would have had time to train our network and would have had our weights. 
 
-We added a YOLO to our code. It allows to detect the people in the image and to crop around them. This is necessary for our network to work correctly. 
+We added a YOLO to our code. It allows to detect the people in the image and to crop around them. This is necessary for our network to work correctly. In addition, this allows to predict the 3D position of all the human on a picture by cropping around each of the person and feeding the network with the cropped image of each person.
 
 
 
 ### Experimental setup
-In order to test our code, we started by first training on a single image to see if we were able to overfit the results to the ground truth. This was done successfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, which is why we were not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
+In order to test our code, we started by first training on a single image to see if we were able to overfit the results to the ground truth. This was done successfully. Since we had a lot of trouble obtaining the human3.6m dataset and also to find what they could have put in the original script in order to train properly, we lost a lot of time, which is why we were not able to train on the full dataset. If we would have more time, we would have tried to train on all images and all actions from all the actors except two for example and use those last two as validation set.
+
+We therefore used the weights provided by the HEMlets authors to do the inference. 
 
 We first tried to overfit the ground truth of an image in order to make sure our network was capable of doing this. We did this by training our network on top of the weights provided with the paper and from scratch. Both results where satisfying. The following image shows the initialisation and the result of over fitting an image from scratch.
 
 <img src="./images/overfit.png" width=786>
 
-We then tried training a mini batch in order to test our network. The following plots show the loss and the MPJPE (Mean Per Joint Position Error) decreasing with the epochs.  
+We then tried training a mini batch (10 images, 8 for training and 2 for validation) in order to test our network. The following plots show the loss and the MPJPE (Mean Per Joint Position Error) decreasing with the epochs.  
 
 <img src="./images/LossPlots.png" width=400>
 <img src="./images/MPJPE_Plots.png" width=400>
 
-We used the loss described in the paper (a mix of a the HEMlets loss which is based on the heat maps, the 2D loss and the 3D loss). We then used the MPJPE to determine the accuracy of our results. 
+We tried training on scitas, but the training script was really slow and we didn't have enough time to train on the entire dataset. Still we did try to train on a small dataset (10'000 iamges) on scitas but we did not get the results yet...
 
+We used the loss described in the paper (a mix of a the HEMlets loss which is based on the heat maps, the 2D loss and the 3D loss). We then used the MPJPE as validation metrics to attest the correctness of our results.
 
+We see on the first image that the training and validation losses decrease which is a good thing. But by looking on the second picture, we observe that the MPJPE loss of the validation is really bad compared to the training one. This could be explained by the really small dataset we used for training. Since we only have two images in the validation set, if we have bad luck and the network predicts really badly the 3D pose on those images the validation metric will remain big and no other image can compensate for those big values.
 
 
 ### Dataset
 We used the Human3.6M dataset for our work. It can be downloaded from SCITAS (in ```work/scitas-share/datasets/Vita/civil-459/h3.6```). 
 
 As the files where not properly uploaded on SCITAS, we tried many things: using the mini-dataset provided with the HEMlets paper, using another huamn3.6m on SCITAS (that uses CSV files, that we had to try and convert into something usable), etc... We were finaly able to use the data_2d_h36m.npz and the data_3d_h36m.npz files together with the videos. 
-The ```dataset.py``` file allows the user to choose if they wish to use the entire dataset or just a particular batch or scene. 
+The ```dataset.py``` file allows the user to choose if they wish to use the entire dataset or just a particular batch or scene.
+
+For the format of the dataset, we only take 18 joints and the labels are given by the 3D position related to the associated image. We also use the 2D joints location to create the heatmaps.
 
 ### Results
 
-Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the viedos provided for the class). Our YOLO extracts the people one by one, and the network detects the 3D pose of each one of them. 
+Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the videos provided for the class). Our YOLO extracts the people one by one, and the network detects the 3D pose of each one of them. 
 
 <img src="./images/img.jpg" width=786>
 <img src="./images/img1.jpg" width=400>
 <img src="./images/img2.jpg" width=400>
 
-
+Concerning the MPJPE that we obtain, this is of course much worse than the original work since we did not train on as many images like they did. But still the skeleton looks good :)
 
 ## Conclusion
 
-In summary, our project focused on implementing the HEMlets network for 3D human pose estimation. Although we faced time constraints that prevented us from training the network, we wrote the entire code and tested on a few images. We included a YOLO in the script to detect humans and facilitate the 3D pose estimation. Choosing to do a 3D pose estimation based on the image directly and not through lifting allowed us to try something different, despite the added difficulty. 
+In summary, our project focused on implementing the HEMlets network for 3D human pose estimation. Although we faced time constraints that prevented us from training the network, we wrote the entire code and tested on a few images. We included a YOLO in the script to detect humans, facilitate the 3D pose estimation and performing multiperson pose estimation. Choosing to do a 3D pose estimation based on the image directly and not through lifting allowed us to try something different, despite the added difficulty.
 
 
