@@ -83,6 +83,8 @@ To run the tests on the video from the class go to the Inference_on_video folder
 ### Contribution
 As we were unable to find the training code online, we wrote a training script based on the paper and on the inference provided with their Github Repo. In the original paper the authors flip the image and runs it in the network twice. They can then do a sort of mean to determine the 3D pose of the human detected. In our script we do not need to do this image flipping, allowing us to go twice as fast, which is what is needed for a real time application. 
 
+<img src="./images/HEMlets_Us.png" width=786>
+
 ### Experimental setup
 In order to test our code we started by first training on a single image to see if we where able to overfit the results to the ground truth. This was done succesfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, wwhich is why we where not able to train on the full dataset. We therefore used the weights provded by the HEMlets authors to do the inference. 
 
