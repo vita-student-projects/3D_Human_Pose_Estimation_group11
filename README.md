@@ -2,7 +2,7 @@
 
 
 
-This work is mainly done based on the following github repo https://github.com/redrock303/HEMlets. The folder HEMlets contains their code of the repo.
+This work is mainly done based on the HEMlets [github repo](https://github.com/redrock303/HEMlets). The folder HEMlets contains their code of the repo.
 
 
 
@@ -10,6 +10,14 @@ Following are the two papers linked to the HEMlets code:
 [HEMlets Pose: Learning Part-Centric Heatmap Triplets for Accurate 3D Human Pose Estimation](https://arxiv.org/pdf/1910.12032.pdf)
 
 [HEMlets PoSh: Learning Part-Centric Heatmap Triplets for 3D Human Pose and Shape Estimation](https://arxiv.org/pdf/2003.04894.pdf)
+
+
+##What our code does
+There are several parts of our code. In the DLAV folder is the code to train the network. We wrote the training based on what is written in the paper and what is done in the inference script from their repo.
+
+The RealTime folder is the code that allows the user to run the testing in real time. The user will be able to see the 3D pose estimated by the newtork of the realtime image from the webcam. For this to work properly the user must be totally in the image (from the head to the feet).
+
+The Inference_in_video folder contains the code that shows the 3D pose of the videos provided for the course. 
 
 
 To run our code several parts need to be downloaded: 
