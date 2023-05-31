@@ -98,7 +98,13 @@ We first tried to overfit the ground truth of an image in order to make sure our
 
 <img src="./images/overfit.png" width=786>
 
-On the mini order to determine if our network is good we used the MPJPE metric (Mean Per Joint Position Error). 
+We then tried training a mini batch in order to test our network. The following plots show the loss and the MPJPE (Mean Per Joint Position Error) decreasing with the epochs.  
+
+<img src="./images/LossPlots.png" width=400>
+<img src="./images/MPJPE_Plots.png" width=400>
+
+We used the loss described in the paper (a mix of a the HEMlets loss which is based on the heat maps, the 2D loss and the 3D loss). We then used the MPJPE to determine the accuracy of our results. 
+
 
 
 
@@ -108,6 +114,9 @@ We used the Human3.6M dataset for our work. It can be downloaded from SCITAS (in
 
 ## Results
 
+<img src="./images/img.png" width=786>
+<img src="./images/img1.png" width=500>
+<img src="./images/img2.png" width=500>
 
 
 
