@@ -7,14 +7,14 @@ This work is mainly done based on the following github repo https://github.com/r
 
 
 Following are the two papers linked to the HEMlets code:
-HEMlets Pose: [Learning Part-Centric Heatmap Triplets for Accurate 3D Human Pose Estimation](https://arxiv.org/pdf/1910.12032.pdf)
+[HEMlets Pose: Learning Part-Centric Heatmap Triplets for Accurate 3D Human Pose Estimation](https://arxiv.org/pdf/1910.12032.pdf)
 
 [HEMlets PoSh: Learning Part-Centric Heatmap Triplets for 3D Human Pose and Shape Estimation](https://arxiv.org/pdf/2003.04894.pdf)
 
 
 To run our code several parts need to be downloaded: 
 
-	- The pre-trained weights: donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)   (https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing)
+	- The (pre-trained weights)[(https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing)]: donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
 
 	- Download the yolo weights (classes.txt, yolov3.weights and yolov3.cfg)
 
