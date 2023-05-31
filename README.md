@@ -15,13 +15,13 @@ Following are the two papers linked to the HEMlets code: <br>
 ## What our code does
 There are several parts of our code. In the DLAV folder is the code to train the network. We wrote the training based on what is written in the paper and what is done in the inference script from their repo.
 
-The RealTime folder is the code that allows the user to run the testing in real time using the webcam of the computer. The user will be able to see the 3D pose estimated by the newtork of the realtime image from the webcam. For this to work properly the user must be totally in the image (from the head to the feet) and the head should match the top of the image and the feet the bottom.
+The RealTime folder is the code that allows the user to run the testing in real time using the webcam of the computer. The user will be able to see the 3D pose estimated by the network of the realtime image from the webcam. For this to work properly the user must be totally in the image (from the head to the feet) and the head should match the top of the image and the feet the bottom.
 
 The Inference_in_video folder contains the code that shows the 3D pose of the videos provided for the course and saves the json.
 
 ## Downloads
 To run our code several parts need to be downloaded: 
-- The [pre-trained weights](https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing): donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
+- The [pre-trained weights](https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing): download 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
 
 - Download the [yolo weights](https://drive.google.com/drive/folders/17MXfRZ8hNNnaN2jv1XZGHxnoMsKEVLgN?usp=sharing) (classes.txt, yolov3.weights and yolov3.cfg)
 
@@ -32,7 +32,7 @@ To test on the videos from the class (test4_cut.mp4 for example), download the v
 Please, again we remind you to check the HEMlets [github repo](https://github.com/redrock303/HEMlets) and "Darknet: Open Source Neural Networks in C" [https://pjreddie.com/darknet/](Darknet: Open Source Neural Networks in C) where the weights come from.
 
 ## Architecture
-The following architechture must be followed:
+The following architecture must be followed:
 
 
 - ckpt
@@ -61,11 +61,11 @@ The following architechture must be followed:
 
 
 
-## Environement
-Create a new Conda environement:
+## Environment
+Create a new Conda environment:
 ```conda create -n DLAV python=3.7.7```
 
-Install the needed librairies 
+Install the needed libraries  
 ```pip install -r requirement.txt```
 
 To run the training code. go to the DALV folder and either run 
@@ -91,8 +91,12 @@ As we had big difficulties finding the training code online, we wrote a training
 
 This would probably have been corrected if we would have had time to train our network and would have had our weights. 
 
+We added a YOLO to our code. It allows to detect the people in the image and to crop around them. This is necessary for our network to work correctly. 
+
+
+
 ### Experimental setup
-In order to test our code we started by first training on a single image to see if we where able to overfit the results to the ground truth. This was done succesfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, wwhich is why we where not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
+In order to test our code we started by first training on a single image to see if we were able to overfit the results to the ground truth. This was done successfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, which is why we where not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
 
 We first tried to overfit the ground truth of an image in order to make sure our network was capable of doing this. We did this by training our network on top of the weights provided with the paper and from scratch. Both results where satisfying. The following image shows the initialisation and the result of over fitting an image from scratch.
 
@@ -111,12 +115,12 @@ We used the loss described in the paper (a mix of a the HEMlets loss which is ba
 ### Dataset
 We used the Human3.6M dataset for our work. It can be downloaded from SCITAS (in ```work/scitas-share/datasets/Vita/civil-459/h3.6```). 
 
-As the files where not properly uploaded on SCITAS, we tried many things: using the mini-dataset provided with the HEMlets paper, using another huamn3.6m on SCITAS (that uses CSV files, that we had to try and convert into something usable), etc... We where finaly able to use the data_2d_h36m.npz and the data_3d_h36m.npz files together with the videos. 
+As the files where not properly uploaded on SCITAS, we tried many things: using the mini-dataset provided with the HEMlets paper, using another huamn3.6m on SCITAS (that uses CSV files, that we had to try and convert into something usable), etc... We were finaly able to use the data_2d_h36m.npz and the data_3d_h36m.npz files together with the videos. 
 The ```dataset.py``` file allows the user to choose if they wish to use the entire dataset or just a particular batch or scene. 
 
 ## Results
 
-Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the viedos provided for the class). Our YOLO extracts the people one by one and the network detects the 3D pose of each one of them. 
+Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the viedos provided for the class). Our YOLO extracts the people one by one, and the network detects the 3D pose of each one of them. 
 
 <img src="./images/img.jpg" width=786>
 <img src="./images/img1.jpg" width=500>
