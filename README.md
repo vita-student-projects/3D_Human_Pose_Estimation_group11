@@ -123,8 +123,8 @@ The ```dataset.py``` file allows the user to choose if they wish to use the enti
 Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the viedos provided for the class). Our YOLO extracts the people one by one, and the network detects the 3D pose of each one of them. 
 
 <img src="./images/img.jpg" width=786>
-<img src="./images/img1.jpg" width=500>
-<img src="./images/img2.jpg" width=500>
+<img src="./images/img1.jpg" width=400>
+<img src="./images/img2.jpg" width=400>
 
 
 
