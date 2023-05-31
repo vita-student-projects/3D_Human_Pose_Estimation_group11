@@ -181,7 +181,7 @@ def images_crop(images):
                 # cv2.imshow("Frame", square_image)
                 # cv2.waitKey(0)
                 #print(np.shape(image))
-                add = 100
+                add = 20
                 image = np.copy(images[i])
                 original_x = 256
                 original_y = 256
@@ -447,10 +447,13 @@ if __name__ == '__main__':
 
     #train_dataset = H36M(args.dataset_path, split='val')
     train_dataset = H36M(video_path)
+    print("TRAIN DATASET", np.shape(train_dataset))
 
     test = dataloader.val_loader(train_dataset, config, 1)
+    print("TEST", np.shape(test))
 
     for (idx, data) in enumerate(test):
+        print("HERE")
 
         image = data
         print(np.shape(image), type(image))
@@ -463,9 +466,13 @@ if __name__ == '__main__':
         if detected:
             print("DETECTED")       
             image_new = cv2.resize(image_new, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)#Important to have an image 256x256!!!
+            image_new = cv2.rotate(image_new, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            image_new = cv2.flip(image_new, 0)
             # define dataset and dataloader
             print(np.shape(image_new))
             image_new = np.transpose(image_new)
+            image_new=image_new[[2,1,0], :, :]
+            image_new=image_new[[0,1,2], :, :]
             print(np.shape(image_new))
             image_new = np.expand_dims(image_new, axis = 0)
             print("HERE",np.shape(image_new), type(image_new))
@@ -476,4 +483,4 @@ if __name__ == '__main__':
             draw_plots(output, image_new[0])
         else:
             print("PASS")
-            pass
+            passimage = np.transpose(image, (0,3,1,2))
