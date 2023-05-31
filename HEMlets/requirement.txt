@@ -14,3 +14,4 @@ torch
 torchvision==0.2.2
 tqdm==4.19.9
 typing-extensions==3.7.4.3
+scipy

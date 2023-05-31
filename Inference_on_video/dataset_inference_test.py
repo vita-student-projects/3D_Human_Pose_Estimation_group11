@@ -51,13 +51,6 @@ output_dimension = 3
 
 num_of_joints = 17 #data = np.insert(data, 0 , values= [0,0,0], axis=0 )
 
-dataset_direcotories = {"izar":"/home/rhossein/venvs/codes/VideoPose3D/data/",
-                "vita17":"/data/rh-data/h3.6/npz/", 
-                "laptop": "../data/"}  #vita17 used to be: /home/rh/h3.6/dataset/npz/",
-data_directory =  dataset_direcotories[systm]
-path_positions_2d_VD3d = data_directory + "data_2d_h36m.npz" #"data_2d_h36m_gt.npz" 
-path_positions_3d_VD3d =data_directory + "data_3d_h36m.npz"
-
 
 subjects = ['S1', 'S5', 'S6', 'S7', 'S8', 'S9', 'S11']
 subjects = ['S7']
@@ -72,7 +65,7 @@ class H36M(Dataset):
         self.batch_size = batch_size
         self.video_path = video_path
 
-        self.video_and_frame_paths = self.read_data()       
+        self.video_and_frame_paths = self.read_data()
 
 
     def __len__(self):
@@ -83,13 +76,10 @@ class H36M(Dataset):
         cap = cv2.VideoCapture(self.video_and_frame_paths[idx][0])
         cap.set(cv2.CAP_PROP_POS_FRAMES, self.video_and_frame_paths[idx][1]) 
         res, self.frame = cap.read()
-                
-        # self.frame = np.divide(self.frame - img_mean, img_std)
-         
-        # self.frame = cv2.resize(self.frame, (256, 256))
-        print(np.max(self.frame), np.min(self.frame))
-        self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-        return self.frame
+        print(idx)
+        if res:
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            return self.frame
 
     
     def read_data(self):
@@ -103,7 +93,7 @@ class H36M(Dataset):
 
         print("Total frames:", frame_count)
 
-        for frame_num in range(10):            
-            video_and_frame_paths.append( [self.video_path,frame_num*100])
+        for frame_num in range(frame_count):            
+            video_and_frame_paths.append([self.video_path,frame_num])
                 
         return video_and_frame_paths

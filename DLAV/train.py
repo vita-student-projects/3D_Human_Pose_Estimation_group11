@@ -365,12 +365,6 @@ def main(args):
 
     # Set up device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Train model
-    seqList = [11]
-    seqJsonDict = {}
-    for seq in seqList:
-        seqJsonDict[seq] =  LoadSeqJsonDict(rootPath = '../data/',subject=seq)
     
     for epoch in range(args.epochs):
 
