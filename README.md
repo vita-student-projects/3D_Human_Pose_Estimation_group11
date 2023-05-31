@@ -13,7 +13,7 @@ Following are the two papers linked to the HEMlets code:
 
 
 To run our code several parts need to be downloaded: 
-- The (pre-trained weights)[(https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing)]: donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
+- The [pre-trained weights](https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing): donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
 
 - Download the yolo weights (classes.txt, yolov3.weights and yolov3.cfg)
 
