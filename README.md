@@ -13,12 +13,11 @@ Following are the two papers linked to the HEMlets code:
 
 
 To run our code several parts need to be downloaded: 
+- The (pre-trained weights)[(https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing)]: donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
 
-	- The (pre-trained weights)[(https://drive.google.com/drive/folders/1z8Jj0xx4SvHC-YKuw_M_c_Z4vA4HpzID?usp=sharing)]: donwnload 'ckpt' (hemlets_h36m_lastest.pth) and 'data' (S_11_C_4_1.h5)
+- Download the yolo weights (classes.txt, yolov3.weights and yolov3.cfg)
 
-	- Download the yolo weights (classes.txt, yolov3.weights and yolov3.cfg)
-
-	- Download the Human3.6M dataset (SCITAS - h3.6)
+- Download the Human3.6M dataset (SCITAS - h3.6)
 
 To test on the videos from the class (test4_cut.mp4 for example), download the videos from [Google Drive](https://drive.google.com/drive/folders/16xf0AF9zgWAuK6Xyr5xK85t77hM3BwAv?usp=sharing)
 
