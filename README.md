@@ -2,7 +2,7 @@
 
 
 
-This work is mainly done based on the HEMlets [github repo](https://github.com/redrock303/HEMlets). The folder HEMlets contains their code of the repo.
+This work is mainly based on the HEMlets [github repo](https://github.com/redrock303/HEMlets). The folder HEMlets contains their code of the repo.
 
 
 
@@ -92,9 +92,14 @@ As we had big difficulties finding the training code online, we wrote a training
 This would probably have been corrected if we would have had time to train our network and would have had our weights. 
 
 ### Experimental setup
-In order to test our code we started by first training on a single image to see if we where able to overfit the results to the ground truth. This was done succesfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, wwhich is why we where not able to train on the full dataset. We therefore used the weights provded by the HEMlets authors to do the inference. 
+In order to test our code we started by first training on a single image to see if we where able to overfit the results to the ground truth. This was done succesfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, wwhich is why we where not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
 
-In order to determine if our network is good we used the MPJPE metric (Mean Per Joint Position Error). 
+We first tried to overfit the ground truth of an image in order to make sure our network was capable of doing this. We did this by training our network on top of the weights provided with the paper and from scratch. Both results where satisfying. 
+
+<img src="./images/HEMlets_Us.png" width=786>
+
+On the mini order to determine if our network is good we used the MPJPE metric (Mean Per Joint Position Error). 
+
 
 
 ### Dataset
