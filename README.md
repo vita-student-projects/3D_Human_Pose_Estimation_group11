@@ -1,10 +1,15 @@
 # DLAV_3DHumanPose
 
-This work is mainly done based on the following github repo https://github.com/redrock303/HEMlets. The folder HEMlets contains their code of the repo
-And following the two linked papers:
-HEMlets Pose: Learning Part-Centric Heatmap Triplets for Accurate 3D Human Pose Estimation
+This work is mainly done based on the following github repo https://github.com/redrock303/HEMlets. The folder HEMlets contains their code of the repo.
 
-HEMlets PoSh: Learning Part-Centric Heatmap Triplets for 3D Human Pose and Shape  Estimation
+
+
+And following the two linked papers:
+HEMlets Pose: Learning Part-Centric Heatmap Triplets for Accurate 3D Human Pose Estimation (https://arxiv.org/pdf/1910.12032.pdf)
+
+HEMlets PoSh: Learning Part-Centric Heatmap Triplets for 3D Human Pose and Shape Estimation (https://arxiv.org/pdf/2003.04894.pdf)
+
+
 
 Copied and pasted from the original git (mentionned above)
 "
