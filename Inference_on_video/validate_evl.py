@@ -59,13 +59,10 @@ def draw_plots(joints, img):
     
     axImg=plt.subplot(gs1[0,0])
     axImg.axis('off')
-    # axImg.set_title('Input Image' )#,fontdict=font)
 
     axPose3d_pred=plt.subplot(gs1[0,1],projection='3d')
     img = np.transpose(img, (1,2,0))
     
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    print(type(img))
     axImg.imshow(img)
     axImg.axis('off')
 
@@ -86,7 +83,6 @@ def Draw3DSkeleton(channels,ax,edge,Name=None,fontdict=None,j18_color  = None,im
         vals = np.reshape(channels, (-1, 3) )
 
     vals[:] = vals[:] - vals[0]
-    # print("VLAS",vals)
     ax.cla()
     ax.view_init(azim=-136,elev=-157)
     ax.invert_yaxis()
@@ -119,7 +115,6 @@ def images_crop(images):
     global detected
     original_x = np.shape(images)[2]
     original_y = np.shape(images)[1]
-    print(original_x, original_y)
     net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
     model_crop = cv2.dnn_DetectionModel(net)
     #Resize into a small square (320,320) to process a fast analysis
@@ -143,8 +138,6 @@ def images_crop(images):
     square_image[pad_y:pad_y+original_y, pad_x:pad_x+original_x] = images[0]
 
     model_crop.setInputParams(size=(max_dim,max_dim), scale=1/255)
-    print(int(original_x/2), int(original_y/2))
-    # image = cv2.resize(images[0],dsize = (int(original_x/2), int(original_y/2)))
 
     classes = []
     with open("../ckpt/classes.txt", "r") as file_object:
@@ -152,45 +145,28 @@ def images_crop(images):
             #To get the good shape of inputs
             class_name = class_name.strip()
             classes.append(class_name)
-    print(type(images))
     # image = cv2.resize(images, (320,320))
     res_cropped = np.zeros((256,256,3))
     for i in range(np.shape(images)[0]):
-        # image=(np.array(images[i,:,:,:].detach().numpy()))
-        # image = image.astype(np.uint8)
 
         (class_ids, score, bound_boxes) = model_crop.detect(square_image)
-        # plt.imshow(np.transpose(images[i,:,:,:]))
-        # plt.show()
-        print(class_ids, score)
 
         square_image = square_image.astype(np.float)/255
-        print(np.shape(square_image))
         score_lim = 0.98
         people_ids = np.where((class_ids == 0) & (score > score_lim))[0]
         nbr_people = len(people_ids)
         people = np.zeros((nbr_people, 256, 256, 3))
-        print("Number of zeros:", nbr_people)
-        print("Zero indices:", people_ids)
         counter = 0
         counter2 = 0
         detected = False
         for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
 
             x, y, w, h = bound_boxes
-            #print(x, y, h, w)
             class_name=classes[int(class_ids)]
             if counter < nbr_people:
-                # print(classes[int(class_ids)], people_ids[counter], counter, counter2, nbr_people)
-                # print("TRUE", np.shape(people))
                 if class_name=="person" and counter2 == people_ids[counter] and score > score_lim:
 
                     detected = True
-                    # cv2.putText(square_image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
-                    # cv2.rectangle(square_image, (x,y), (x+w,y+h), (200, 0, 50), 3)
-                    # cv2.imshow("Frame", square_image)
-                    # cv2.waitKey(0)
-                    #print(np.shape(image))
                     add = int(h * 0.1)
                     image = np.copy(images[i])
                     original_x = 256
@@ -211,16 +187,11 @@ def images_crop(images):
                         high = y - diff + w + add
                         high = np.clip(high, 0, max_dim)
                         cropped = square_image[low:high,np.clip(x-add, 0, max_dim):np.clip(x+w+add, 0, max_dim),:]
-                    print(diff, low, high, x,y,h, w)
-                    print(np.shape(cropped))
+
                     res_cropped[:,:,:] = (cv2.resize((cropped), (256,256)))
                     people[counter] = res_cropped
                     counter += 1
             counter2 += 1
-    print(np.shape(people))
-        # show_skeleton(global_pos)
-    # plt.imshow(square_image)
-    # plt.show()
     return people, counter
 
 def normalized_to_original(image):
@@ -277,10 +248,8 @@ if __name__ == '__main__':
     project_name = "2_3D_Human_Pose_Estimation"
     output_json = []
     for (idx, data) in enumerate(test):
-        print("HERE")
 
         image = data
-        print(np.shape(image), type(image))
         image = image.numpy()
         # print(np.max(image[0], axis=(1,2)), np.min(image[0], axis=(1,2)))
         if show_images:
@@ -294,26 +263,19 @@ if __name__ == '__main__':
             for k in range(nbr_people):
                 image_new[k] = cv2.rotate(image_new[k], cv2.ROTATE_90_COUNTERCLOCKWISE)
                 image_new[k] = cv2.flip(image_new[k], 0)
-            print(np.shape(image_new))
             # define dataset and dataloader
-            print(np.shape(image_new))
             image_new = np.transpose(image_new, (0,2,1,3))
-            print(np.shape(image_new))
             # image_new = np.expand_dims(image_new, axis = 0)
             image_new = np.transpose(image_new, (0,3,1,2))
-            print("HERE",np.shape(image_new), type(image_new))
             image_new = torch.Tensor(image_new)
             output = model(image_new)
             output[:,:,:2] = (output[:,:,:2] + 0.5)*256.0
             output[:,:,2] *= 128
-            print(np.shape(output))
             if show_images:
                 for k in range(nbr_people):
                     draw_plots(output[k], image_new[k])
             output[:,:,:] = output[:,:,:] - output[:,0:1,:]
 
-            # output = output.detach().numpy()
-            # show_skeleton(output)
             #JSON
             frame_predictions = {
                 "frame": idx,
@@ -331,7 +293,7 @@ if __name__ == '__main__':
         else:
             frame_predictions = {
                 "frame": idx,
-                "predictions": []  # Empty list for now, you can add your predictions here
+                "predictions": []
             }
             for i in range(nbr_people):
                 prediction = {

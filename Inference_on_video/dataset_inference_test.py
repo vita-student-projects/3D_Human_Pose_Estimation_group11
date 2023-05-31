@@ -93,7 +93,7 @@ class H36M(Dataset):
 
         print("Total frames:", frame_count)
 
-        for frame_num in range(frame_count):            
+        for frame_num in range(100):            
             video_and_frame_paths.append([self.video_path,frame_num])
                 
         return video_and_frame_paths

@@ -1,130 +1,8 @@
-# import cv2
-# import numpy as np
-# import os
-# import sys
-
-# #Adds original git folder to path
-# #sys.path.append('../HEMlets/')
-
-# #Adds everything to path
-# sys.path.append('..')
-
-# import torch
-# import torch.utils.data as tData
-# import glob
-# import matplotlib.pyplot as plt
-# import random
-# import json 
-# import sys 
-# import h5py  
-
-# from HEMlets.table import *
-
-# class H36M(tData.Dataset):
-#     def __init__(self,h5_path,video_id=1,subject=11,patch_width=256,patch_height=256,split = 'train'):
-
-#         super(H36M,self).__init__()
-
-#         self.subject = subject
-
-#         self.h5_path = h5_path
-
-#         self.video_id = video_id
-
-
-#         with h5py.File(self.h5_path,'r') as db:
-#             self.len_data = db['images'].shape[0]
-
-#         print(self.len_data)
-
-#     def __len__(self):
-#         return self.len_data 
-
-#     def imgNormalize(self,img,flag = True):
-#         if flag:
-#             img = img[:,:,[2,1,0]]
-#         return np.divide(img - img_mean, img_std)
-
-#     def __getitem__(self, index):
-#         # index = 555
-#         h5_path =  self.h5_path
-        
-#         idx = index % self.__len__()
-#         with h5py.File(h5_path,'r') as db:
-#             joints = db['pos3D'][idx]
-#             image = db['images'][idx]
-#             #print("JOINTS", joints)
-#             joints = joints/1000 #SEEMS CORRECT
-#             # joints[:,2] = joints[:,2] / 255.0 - 0.5
-#             # joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
-#             joint3d = torch.from_numpy(joints).float()
-#             image = (image).astype(float)
-#             #print(type(image[0,0,0]))
-#             #print(np.max(image))
-#             #image = self.imgNormalize(image)
-#             image = np.transpose(image,(2,1,0))
-#             image = torch.from_numpy(image).float()
-
-#             return image, joint3d
-        
-#         # index = 555
-#         h5_path =  self.h5_path
-        
-#         idx = index % self.__len__()
-#         with h5py.File(h5_path,'r') as db:
-#             #print(db.keys())
-#             joints3dCam = db['joints3d_cam'][idx] # load the camera space 3d joint (32,3)
-#             joint3d_j18 = np.zeros((18,3),dtype=float)
-#             joint3d_j18[0:17,:] = joints3dCam[H36M_TO_J18,:] 
-#             joint3d_j18[17] = (joint3d_j18[11] + joint3d_j18[14]) * 0.5 
-
-
-#             img = db['images'][idx]
-#             joints = db['joints'][idx]
-#             print(np.shape(img), np.shape(joints))
-#             trans = db['trans'][idx]
-#             camid = db['camid'][idx]
-
-#             cam_id = np.zeros((4,),dtype = int)
-#             cam_id[:3] = camid
-#             cam_id[3] = self.video_id #int( ((h5_path.split('/')[-1]).split('.')[0]).split('_')[4])
-
-
-            
-#             joints[:,2] = joints[:,2] / 255.0 - 0.5
-#             joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
-
-#             image = self.imgNormalize(img)
-
-#             joint3d = torch.from_numpy(joints).float()
-#             joint3d_j18 = torch.from_numpy(joint3d_j18).float()
-#             image = np.transpose(image,(2,0,1))
-
-#             image_filp = image[:,:,::-1].copy()
-#             image_filp = torch.from_numpy(image_filp).float()
-           
-#             image = torch.from_numpy(image).float()
-
-#             #PAS SUR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#             joint2d = db['joints2d_full'][idx]/1000*64
-            
-#             return image,image_filp,trans,cam_id, joint2d,joint3d,joint3d_j18,np.zeros((3),dtype=float),'subject_{}'.format(self.subject)
-# if __name__ == '__main__':
-#     d = H36M(split = 'val')
-#     for _ in range(100):
-#         d[12000]
-#         input('check')
-
-
 import cv2
 import numpy as np
 import os
 import sys
 
-#Adds original git folder to path
-#sys.path.append('../HEMlets/')
-
-#Adds everything to path
 sys.path.append('..')
 
 import torch
@@ -212,38 +90,22 @@ class H36M(Dataset):
     def __getitem__(self, idx):
         img_mean = np.array([123.675,116.280,103.530])
         img_std = np.array([58.395,57.120,57.375])
-        # image_numpy = image.cpu().numpy()
-        # image_numpy = np.transpose(image_numpy, (0, 2, 3, 1))
-        # image_numpy = image_numpy * img_std + img_mean
-        # return image_numpy.astype(np.uint8)
 
         if load_imgs:
             if from_videos:
                 cap = cv2.VideoCapture(self.video_and_frame_paths[idx][0])
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.video_and_frame_paths[idx][1]) 
                 res, self.frame = cap.read()
-                #print(np.shape(self.frame), self.frame)
-                # self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-                # self.frame = self.frame * img_std + img_mean
                 self.frame = np.divide(self.frame - img_mean, img_std)
-                print("IMAGESASDDS VFS", np.max(self.frame), np.min(self.frame))
             else :
                 self.frame = cv2.imread(self.video_and_frame_paths[idx][0])
-                #print(np.shape(self.frame), self.frame)
-                # print("***",self.video_and_frame_paths[idx][0], self.frame ,"***")
-                # self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-                # self.frame = (self.frame - img_mean) / img_std 
+ 
                 self.frame = np.divide(self.frame - img_mean, img_std)
 
         keypoints_2d = self.dataset2d[idx].reshape(-1 ,2)
         #resising the image for Resnet
         self.frame = cv2.resize(self.frame, (256, 256))
 
-
-        # joints[:,2] = joints[:,2] / 255.0 - 0.5
-        # joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
-        
-        #self.frame = self.frame/256.0
         return keypoints_2d, self.dataset3d[idx], self.frame.astype(np.float), self.global_pos[idx], self.min2d[idx], self.max2d[idx], self.min3d[idx], self.max3d[idx] #cam 0 
 
         
@@ -271,97 +133,6 @@ class H36M(Dataset):
             dataset = (dataset- min2d_exp)/(max2d_exp - min2d_exp)
 
             return dataset, min2d_exp, max2d_exp
-            return dataset
-            #print(np.max(dataset,axis = (0,1,2)), np.min(dataset,axis = (0,1,2)))
-            return (dataset - np.max(dataset,axis = (0,1,2))) / (np.max(dataset,axis = (0,1,2)) - np.min(dataset,axis = (0,1,2)))
-            if z_c:
-                for i in range(n_frames):
-                    dataset[i,1:] = dataset[i,1:] - dataset[i,0]
-
-            if is_train :
-                data_sum = np.sum(dataset, axis=0)
-                data_mean = np.divide(data_sum, n_frames)
-
-
-                diff_sq2_sum =np.zeros((n_joints,dim))
-                for i in range(n_frames):
-                    diff_sq2_sum += np.power( dataset[i]-data_mean ,2)
-                data_std = np.divide(diff_sq2_sum, n_frames)
-                data_std = np.sqrt(data_std)
-
-                
-                if dim == 2:
-                    with open("mean_train_2d.npy","wb") as f:
-                        np.save(f, data_mean)
-                    with open("std_train_2d.npy","wb") as f:
-                        np.save(f, data_std)  
-
-
-                elif dim == 3:
-                    with open("mean_train_3d.npy","wb") as f:
-                        np.save(f, data_mean)  
-                    with open("std_train_3d.npy","wb") as f:
-                        np.save(f, data_std)  
-                        
-                    with open("max_train_3d.npy","wb") as f:
-                        np.save(f, np.max(dataset, axis=0))  
-                    with open("min_train_3d.npy","wb") as f:
-                        np.save(f, np.min(dataset, axis=0)) 
-
-
-            if dim == 2:
-                with open("mean_train_2d.npy","rb") as f:
-                    mean_train_2d = np.load(f)
-                with open("std_train_2d.npy","rb") as f:
-                    std_train_2d = np.load(f)  
-            elif dim == 3:
-                with open("mean_train_3d.npy","rb") as f:
-                    mean_train_3d =np.load(f)  
-                with open("std_train_3d.npy","rb") as f:
-                    std_train_3d = np.load(f)  
-                    
-                with open("max_train_3d.npy","rb") as f:
-                    max_train_3d =np.load(f)  
-                with open("min_train_3d.npy","rb") as f:
-                    min_train_3d = np.load(f)  
-
-
-            if standardize :
-                if dim == 2 :
-                    for i in range(n_frames):
-                        if Normalize:
-                            # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
-                            # print(max_dataset, min_dataset)
-                            # dataset[i] = np.divide(2*dataset[i], (max_dataset-min_dataset))
-                            # dataset[i] = dataset[i] - np.divide(min_dataset, (max_dataset-min_dataset))
-                            dataset[i] = 2*dataset[i] -1 
-
-                        else:
-                            dataset[i] = np.divide(dataset[i] - mean_train_2d, std_train_2d)
-                elif dim == 3:
-                    for i in range(n_frames):
-                        if Normalize:
-                            # max_dataset, min_dataset = np.max(dataset, axis=0), np.min(dataset, axis=0)
-                            dataset[i] = np.divide(dataset[i]- min_train_3d, (max_train_3d-min_train_3d))
-                        else:
-                            dataset[i] = np.divide(dataset[i] - mean_train_3d, std_train_3d)
-
-
-            if num_of_joints == 16: #Should through an error if num of joints is 16 but zero centre is false    
-                dataset = dataset[:, 1:, :].copy()
-            elif z_c :
-                dataset [:,:1,:] *= 0
-
-
-            if dim == 2 and sample :
-                dataset = dataset.reshape((int(n_frames/4),4, num_of_joints,2))
-
-            dataset = dataset[Samples] if sample else dataset
-
-            if dim == 2 and sample :
-                dataset = dataset.reshape(-1, num_of_joints,2)  
-
-            return dataset
         
     
     def read_data(self,subjects = subjects, action = "", is_train=True):

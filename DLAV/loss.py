@@ -10,36 +10,18 @@ class MPJPE_Loss(nn.Module):
         super(MPJPE_Loss, self).__init__()
 
     def forward(self, pred, joints, middle_out, joint2d):
-        """
-        Compute Mean Per Joint Position Error (MPJPE) between predicted and ground-truth 3D joint positions.
-
-        Args:
-            pred: Tensor of shape (batch_size, num_joints, 3), predicted 3D joint positions
-            target: Tensor of shape (batch_size, num_joints, 3), ground-truth 3D joint positions
-
-        Returns:
-            loss: Tensor of shape (), mean per joint position error
-        """
         L2D = 0
         LHEM = 0
         l3D = 0
         
         joints = torch.Tensor(joints)
         pred = torch.Tensor(pred)
-        # for i in range(joints.size()[0]):
-        #     joints[i,:,:] = joints[i,:,:] - joints[i,0,:]
-        #     pred[i,:,:] = pred[i,:,:] - pred[i,0,:]
         joints = joints - joints[:, 0, :].unsqueeze(1)
         pred = pred - pred[:, 0, :].unsqueeze(1)
         
         if pred.requires_grad:
             print("GRAD")
-        # pred.requires_grad = True
-        # joints.requires_grad_()
-        
-        print("JOINTS", joints, pred)
-        print(type(pred), type(joints), joints.size())
-        print(joints.size()[0])
+
         #HEMlets loss
 
         #L3D_lambda
@@ -60,18 +42,12 @@ class MPJPE_Loss(nn.Module):
         print("L2D",L2D)
 
         #LHEMlets
-        ################################################
-        #
-        # This create the Tgt. It should be displaced to be done only once in the beginning
-        #
-        ################################################
         LHEM = np.zeros(np.shape(heatmap_2d)[0])
         #List of [[parent, child]]
         parent = [[13, 15], [13, 17], [13, 18], [13, 19], [13, 25], [13, 26], [13, 27], [0, 13], [0, 1], [0, 2], [0, 3], [0, 6], [0, 7], [0, 8]]
         parent = [[0,1], [1,2],[2,3],[0,4],[4,5],[5,6],[0,8],[8,14],[14,15],[15,16],[8,11],[11,12],[12,13],[8,10]]
         for j in range(np.shape(heatmap_2d)[0]):
             for i in range(np.shape(parent)[0]):
-                #print("CORRESPONDANCE : First is z, 9 ",correspondance.get(parent[i][0]), correspondance.get(parent[i][1]))
 
                 #Parent and child
                 p = parent[i][0]
@@ -98,8 +74,6 @@ class MPJPE_Loss(nn.Module):
         print("l3D",l3D.item())
         print("loss", loss.item())
         MPJPE_Val=self.MPJPE(joints, pred)
-        if loss.requires_grad:
-            print("ONJDSNKDS")
         return loss , MPJPE_Val
     
     def heatmap_triplets(self, zp, zc, heatmap_p, heatmap_c):
@@ -152,10 +126,6 @@ class MPJPE_Loss(nn.Module):
             
         gnd_truth=gnd_truth.detach().numpy()
         estimation=estimation.detach().numpy()
-        
-        # MPJPE= np.mean(gnd_truth[:,0:17,:]-estimation[:,0:17,:])
-        # print("GROUND TRUTH: ",gnd_truth[:,0:17,:])
-        # print("GROUND TRUTH: ",estimation[:,0:17,:])
-        
+    
         MPJPE=np.average(np.sqrt(np.sum(np.square(gnd_truth[:,0:17,:] - estimation[:,0:17,:]),axis=-1))) 
         return MPJPE

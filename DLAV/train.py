@@ -107,7 +107,6 @@ def draw_plots(joints, img, joints_gt):
     axImg.axis('off')
 
     Draw3DSkeleton(joints, axPose3d_pred,JOINT_CONNECTIONS,'Pred_joint3d',fontdict=font,j18_color=JOINT_COLOR_INDEX,image = None)
-    # print(np.shape(joints_gt), np.shape(joints))
     gt_exp = np.zeros((1, 18, 3))
     gt_exp[:, :17, :] = joints_gt
     gt_exp[:,17,:] = joints_gt[:,7,:]
@@ -143,48 +142,14 @@ def Draw3DSkeleton(channels,ax,edge,Name=None,fontdict=None,j18_color  = None,im
     xroot, yroot, zroot = vals[0,0], vals[0,1], vals[0,2]
     maxAxis = np.max(vals,axis=0)
     minAxis = np.min(vals,axis=0)
-    # max_size = np.max(maxAxis-minAxis) / 2 * 1.1
-    
-    # ax.set_xlim3d([-max_size + xroot, max_size + xroot])
-    # ax.set_ylim3d([-max_size + zroot, max_size + zroot])
-    # ax.set_zlim3d([-max_size + yroot, max_size + yroot])
     
     max_size = 130
     ax.set_xlim3d([-max_size , max_size ])
     ax.set_ylim3d([-max_size , max_size ])
     ax.set_zlim3d([-max_size , max_size ])
-    #print max_size,vals
-    if False:
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("z")
-
-    # Get rid of the ticks and tick labels
-    # ax.set_xticks([])
-    # ax.set_yticks([])
-    # ax.set_zticks([])
-
-    # ax.get_xaxis().set_ticklabels([])
-    # ax.get_yaxis().set_ticklabels([])
-    # ax.set_zticklabels([])
-    # ax.set_aspect('equal')
-
-
-
-    # px = np.arange(-max_size + xroot, max_size + xroot, 3)   
-    # pz = np.arange(-max_size + zroot, max_size + zroot, 3)     
-    # px, pz = np.meshgrid(px,pz)   
-
-    # py = np.zeros((px.shape[0],px.shape[1]),dtype=float)
-    # py[:,:]=vals[:,1].max()
-
-    # #print px.shape,pz.shape,py.shape
-    # ax.axis('off')
-    # surf = ax.plot_surface(px, pz, py,color='gray',alpha=0.5)   
 
     if Name is not None :
         ax.set_title(Name,fontdict=fontdict)
-    # ax.set_aspect('equal')
 
 def from_normjoint_to_cropspace(joint3d):
     temp = np.zeros_like(joint3d)
@@ -237,25 +202,15 @@ def show_skeleton(joints):
         sk_points = [[0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[5,6],[0,7],[7,8],[8,9],[9,10],[8,11],[11,12],[12,13],[8,14],[14,15],[15,16]]
         for j in range(17):
             ax.plot(xdata[sk_points[j]], ydata[sk_points[j]], zdata[sk_points[j]] , "b" )
-        # plt.xlim([-1.5, 1.5])
-        # plt.ylim([-1.5, 1.5])
         ax.invert_zaxis()
         plt.show()
 def inverse_norm(skeleton, min3d, max3d):
     skeleton = skeleton.detach().numpy()
-    print(type(max3d), type(skeleton))
     min3d = min3d.detach().numpy()
     max3d = max3d.detach().numpy()
     rec_skeleton = np.zeros(np.shape(skeleton))
-    print(np.shape(skeleton),np.shape(min3d))
-    # for i in range(np.shape(skeleton)[0]):
-    #     rec_skeleton[i] = (np.add(skeleton[i], min3d[i]))*(max3d[i] - min3d[i])
     rec_skeleton = (skeleton) * (max3d - min3d) + min3d
     return rec_skeleton
-    rec_skeleton[:,:,2] = (skeleton[:,:,2] + 0.5) * 255.0
-    rec_skeleton[:,:,0:2] = (skeleton[:,:,0:2] + 0.5) * 256.0
-    return rec_skeleton
-
 
 def images_crop(images, global_pos, joint3d):
     img_mean = np.array([123.675,116.280,103.530])
@@ -280,22 +235,15 @@ def images_crop(images, global_pos, joint3d):
         image = image.astype(np.uint8)
 
         (class_ids, score, bound_boxes) = model_crop.detect(image)
-        # plt.imshow(np.transpose(images[i,:,:,:]))
-        # plt.show()
         image = image.astype(np.float)
         image = np.divide(image - img_mean, img_std)
 
         for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
             x, y, w, h = bound_boxes
-            #print(x, y, h, w)
             class_name=classes[int(class_ids)]
             
             if class_name=="person":
-                #cv2.putText(image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
-                #cv2.rectangle(image, (x,y), (x+w,y+h), (200, 0, 50), 3)
-                #cv2.imshow("Frame", image)
-                #cv2.waitKey(0)
-                #print(np.shape(image))
+
                 add = 10
                 image = np.copy(images[i])
                 original_x = 256
@@ -325,7 +273,7 @@ def images_crop(images, global_pos, joint3d):
 def main(args):
     show = False
     trainable = True
-    enable_drawing = True
+    enable_drawing = False
     show_each = 1
     #Files to save the losses
     f = open("checkpoints/loss_train.txt", "w")
@@ -341,9 +289,6 @@ def main(args):
     train_dataset = H36M(args.batch_size)
 
     train, validation, test = dataloader.val_loader(train_dataset, config, args.data_ratio, args.validation_ratio, args.test_ratio, args.batch_size)
-
-    #train_dataset = MyDataset(args.dataset_path, transform=transforms.ToTensor()) # replace with your own dataset class
-    #train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
     # Set up model and optimizer
     model = Network(config)
@@ -373,16 +318,9 @@ def main(args):
         for (idx, data) in enumerate(train):
 
             joint2d,joint3d, image_b, global_pos, min2d, max2d, min3d, max3d = data
-            # joints[:,2] = joints[:,2] / 255.0 - 0.5
-            # joints[:,0:2] = joints[:,0:2] / 256.0 - 0.5
 
-            # global_pos = global_pos[:,:,[2,0,1]]
             global_pos[:,:,2] = global_pos[:,:,2]/255.0 - 0.5
             global_pos[:,:,0:2] = global_pos[:,:,0:2]/256.0 - 0.5
-
-            # joint3d = joint3d[:,:,[2,0,1]]
-            # joint3d[:,:,2] = joint3d[:,:,2]/255.0 - 0.5
-            # joint3d[:,:,0:2] = joint3d[:,:,0:2]/256.0 - 0.5
 
             image = torch.from_numpy(images_crop(image_b, global_pos, joint3d)).float()
 
@@ -404,7 +342,7 @@ def main(args):
             H36M_NAMES[12] = 'Spine'
             H36M_NAMES[13] = 'Thorax'              p,c 13, 15      13-17-18-19     13-25-26-27     0-13    0-1-2-3     0-6-7-8
             H36M_NAMES[14] = 'Neck/Nose'
-            H36M_NAMES[15] = 'Head'                         Il y en a 14, c'est juste!
+            H36M_NAMES[15] = 'Head'
             H36M_NAMES[17] = 'LShoulder'
             H36M_NAMES[18] = 'LElbow'
             H36M_NAMES[19] = 'LWrist'
@@ -413,29 +351,13 @@ def main(args):
             H36M_NAMES[27] = 'RWrist' """
             
             #https://github.com/una-dinosauria/3d-pose-baseline/issues/185
-            # plt.scatter(joint2d[0, :, 0], joint2d[0,:,1])
-            # plt.show()
 
             optimizer.zero_grad()
             image = np.transpose(image, (0,3,1,2))
             image_b = np.transpose(image_b, (0,3,1,2))
             image_b = (image_b).float()
 
-            # output, middle_out = model(image_b)
-            # if not trainable:
-            #     output = from_normjoint_to_cropspace(output)
-            # global_pos = global_pos[:,:,[0,2,1]]
-            # global_pos[:,:,0] = global_pos[:,:,0]
-            # global_pos[:,:,1] = -global_pos[:,:,1]
-            # global_pos[:,:,2] = global_pos[:,:,2]
-            # gt_joints = from_normjoint_to_cropspace(global_pos)*128
-
-            # if not trainable:
-            #     draw_plots(output, image_b[0], gt_joints)
-
-            # show_skeleton(output[:,:17,:].detach().numpy())
             output, middle_out = model(image)
-            # output = from_normjoint_to_cropspace(output)
             output[:,:,:2] = (output[:,:,:2] + 0.5)*256.0
             output[:,:,2] *= 128
 
@@ -458,14 +380,12 @@ def main(args):
 
             #Show 2djoints heatmap
             array = middle_out[0,0,:,:].detach().numpy()
-            #print(np.max(array), np.min(array))
             if show:
                 plt.imshow(array,cmap='hot')
                 plt.colorbar()
                 plt.show()
             
 
-            #print(np.shape(joints2d_list))
             heatmap = create_heatmap(joint3d, np.shape(middle_out)[2])
             if show and False:
                 plt.imshow(heatmap[0,0,:,:], cmap='hot')
@@ -482,11 +402,6 @@ def main(args):
 
             print('Train Epoch: {} [(%)]\tLoss: {:.6f}'.format(
                     epoch, loss.item()))
-
-            """ if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item())) """
             #TO BREAK
             """if count == 1:
                 break
@@ -526,7 +441,7 @@ def main(args):
             loss_val, MPJPE_val = criterion(val_output, gt_joints, middle_out, joint2d)
             MPJPE_val = MPJPE_val * 100
             # loss_val = criterion(val_output, joint3d, middle_out, joint2d)
-            print("LOSSSSSSSSVAAAL",loss_val.item())
+            print("Loss val",loss_val.item())
         # Getting all memory using os.popen()
         total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
         

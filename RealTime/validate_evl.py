@@ -21,7 +21,6 @@ import time
 detected = False
 def images_crop(images):
     global detected
-    print("JBNHJBDABVDAVHJVD", np.shape(images))
     original_y  = np.shape(images)[0]
     original_x = np.shape(images)[1]
     net = cv2.dnn.readNet("../ckpt/yolov3.weights","../ckpt/yolov3.cfg")
@@ -39,25 +38,15 @@ def images_crop(images):
             classes.append(class_name)
 
     res_cropped = np.zeros(np.shape(images))
-    print(np.shape(images))
     images = (cv2.resize(images, (size_img,size_img)))
-    print(np.shape(images), type(images), np.max(images), np.min(images))
     (class_ids, score, bound_boxes) = model_crop.detect(images)
 
     for class_ids, score, bound_boxes in zip(class_ids, score, bound_boxes):
         x, y, w, h = bound_boxes
-        #print(x, y, h, w)
         class_name=classes[int(class_ids)]
-        print(class_name)
         detected = False
         if class_name=="person":
             detected = True
-            print("TRU", np.shape(images))
-            #cv2.putText(image, str(class_name)+str(score), (x, y - 5), cv2.FONT_HERSHEY_PLAIN, 3, (200, 0, 50), 2)
-            #cv2.rectangle(image, (x,y), (x+w,y+h), (200, 0, 50), 3)
-            #cv2.imshow("Frame", image)
-            #cv2.waitKey(0)
-            #print(np.shape(image))
             add = 30
             image = np.copy(images)
             if h >= w:
@@ -66,8 +55,6 @@ def images_crop(images):
                 low = np.clip(low, 0, original_x)
                 high = x - diff + h + add
                 high = np.clip(high, 0, original_x)
-                print("FINAL", y+h+add-(y-add), x+high- (x-low))
-                print(high, low, original_x, original_y)
                 cropped = image[y:y+h,x-low:x+high,:]
             else:
                 diff = int((w - h))
@@ -75,19 +62,12 @@ def images_crop(images):
                 low = np.clip(low, 0, original_y)
                 high = y - diff + w + add
                 high = np.clip(high, 0, original_y)
-                print(high, low, original_x, original_y)
-                print("FINAL", y+high-(y-low), x+w- (x-add))
                 cropped = image[y-low:y+high,x:x+w,:]
             
-            print(np.shape(image), np.shape(cropped))
             res_cropped = (cv2.resize((cropped), (256,256)))
             # cv2.imshow("NEW", np.transpose(res_cropped[i]))
             # cv2.waitKey(0)
-            print(np.shape(res_cropped))
             break
-    print("ICIIIIIIIIIIIIIIIIIIIIIIII",np.shape(res_cropped))
-    # plt.imshow(np.transpose(res_cropped[1]))
-    # plt.show()
     return res_cropped
 
 def normalized_to_original(image):
@@ -137,11 +117,6 @@ def validate(model, val_loader, device,  subject=9,visualize = False, First = Fa
     action_wise_error_dict = {}
     for i in range(15):
         action_wise_error_dict[i] = [0.0, 0.0, 0.0]
-    
-    # result_pics_path = './pics/'
-
-    # if os.path.exists(result_pics_path) is False:
-    #     os.mkdir(result_pics_path)
 
     N_viz = val_loader.__len__() 
     idx_list = []
@@ -179,13 +154,10 @@ def validate(model, val_loader, device,  subject=9,visualize = False, First = Fa
         # abs joint root 
         joint_root_numpy = [None] 
 
-        
-
         # calculate the MPJPE(Protocol #1) and MPJPE(Protocol #2)
         actionID, protocol_1,protocol_2,vedioName,gt_crop_3d_joint,pred_crop_3d_joint= \
                     eval_metric(pred_joint3d_numpy,pred_joint3d_flip_numpy,gt_joint3d_numpy,camid_numpy,\
                     trans_numpy,joint_root_numpy,joint3d_camera_numpy,seqJsonDict = seqJsonDict,debug = False,return_viz_joints=True)
-        print('actionID, protocol_1,protocol_2,vedioName',actions[actionID], protocol_1,protocol_2,vedioName)
         # inference_time = time.time()-start_time
 
 
@@ -198,48 +170,12 @@ def validate(model, val_loader, device,  subject=9,visualize = False, First = Fa
             protocol_2_list.append(protocol_2)
             idx_list.append(idx)
 
-            # start_img_time = time.time()
-
             img = image_batch[0]
-            # draw gt 2d joint on the image  
-            #image_draw = drawSkeleton(img.copy(),gt_crop_3d_joint,JOINT_CONNECTIONS,JOINT_COLOR_INDEX)
             axImg.imshow(img)
             axImg.axis('off')
             axImg.set_title('S_11: ({})'.format(vedioName),fontdict=font)
-            # img_time = time.time() - start_img_time
 
-            # start_skel_time = time.time()
-            # draw 3d joints
-            
-            #Draw3DSkeleton(gt_crop_3d_joint,axPose3d_gt,JOINT_CONNECTIONS,'GT_joint3d',fontdict=font,j18_color=JOINT_COLOR_INDEX,image = None)
             Draw3DSkeleton(pred_crop_3d_joint,axPose3d_pred,JOINT_CONNECTIONS,'Pred_joint3d',fontdict=font,j18_color=JOINT_COLOR_INDEX,image = None)
-            # skel_time = time.time() - start_skel_time
-            # plot the cruve of Protocol #1 and Protocol #2
-
-            # start_line_time = time.time()
-
-            #ax_mpjpe.plot(idx_list[-3:],protocol_1_list[-3:],color='b',label='Protocol #1')
-            #ax_mpjpe.plot(idx_list[-3:],protocol_2_list[-3:],color='g',label='Protocol #2')
-
-            # ax_mpjpe.plot([idx-0.5,idx+0.5],[protocol_1_list[-1],protocol_1_list[-1]],color='b',label='Protocol #1')
-            # ax_mpjpe.plot([idx-0.5,idx+0.5],[protocol_2_list[-1],protocol_2_list[-1]],color='g',label='Protocol #2')
-
-            # line_time = time.time() - start_line_time
-
-            # start_save_time = time.time()
-
-            # add legend annotations
-            
-            """ plt.legend(loc = 'upper right',edgecolor='blue')
-            ax_mpjpe.set_ylabel('Pose Error (mm)',fontsize = 10)
-            ax_mpjpe.set_xlabel('Frame',fontsize = 10)
-
-            ax_mpjpe.set_xlim(0,N_viz)
-            ax_mpjpe.set_ylim(7,65)
-
-            if idx >= N_viz-1:
-                ax_mpjpe.plot(idx_list,protocol_1_list,color='b',label='Protocol #1')
-                ax_mpjpe.plot(idx_list,protocol_2_list,color='g',label='Protocol #2') """
 
             plt.draw()             
             plt.pause(0.01)
@@ -287,8 +223,6 @@ def validate(model, val_loader, device,  subject=9,visualize = False, First = Fa
     for k,_ in action_wise_error_dict.items():
         if action_wise_error_dict[k][2]>0:
             print(actions[k],action_wise_error_dict[k][0]/action_wise_error_dict[k][2],action_wise_error_dict[k][1]/action_wise_error_dict[k][2])
-    
-    print("END")
 
 if __name__ == '__main__':
     
@@ -310,7 +244,6 @@ if __name__ == '__main__':
                         help='evaluation sequence id of the testing dataset')
 
     argspar = parser.parse_args()
-    print('argspar',argspar)
 
     from config import config
     from network import Network
@@ -327,11 +260,9 @@ if __name__ == '__main__':
 
     checkpoint_path = argspar.ckpt_path # './ckpt/hemlets_lastest.pth'
     tiny_dataset = argspar.dataset_path  #'./data/S11/S_11_C_4_1_full.h5'
-    print('tiny_dataset',tiny_dataset)
     video_id = argspar.video_id # (1-120)
 
     visualize = True if argspar.visualize==1 else False
-    print('argspar.visualize',argspar.visualize)
 
 
     # load model weights
@@ -343,8 +274,6 @@ if __name__ == '__main__':
     
     First = True
     while True:
-        print('test')
-        #########################################################################Change here to load another image
         cap = cv2.VideoCapture(0)
         compt = 0
         while True:
@@ -355,7 +284,6 @@ if __name__ == '__main__':
         cap.release()
 
         frame = frame
-        print("MAXMAXX",np.max(frame))
 
         image_new = images_crop(frame)
         detected = False
