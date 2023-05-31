@@ -96,7 +96,7 @@ We added a YOLO to our code. It allows to detect the people in the image and to 
 
 
 ### Experimental setup
-In order to test our code we started by first training on a single image to see if we were able to overfit the results to the ground truth. This was done successfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, which is why we where not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
+In order to test our code, we started by first training on a single image to see if we were able to overfit the results to the ground truth. This was done successfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, which is why we were not able to train on the full dataset. We therefore used the weights provided by the HEMlets authors to do the inference. 
 
 We first tried to overfit the ground truth of an image in order to make sure our network was capable of doing this. We did this by training our network on top of the weights provided with the paper and from scratch. Both results where satisfying. The following image shows the initialisation and the result of over fitting an image from scratch.
 
@@ -118,7 +118,7 @@ We used the Human3.6M dataset for our work. It can be downloaded from SCITAS (in
 As the files where not properly uploaded on SCITAS, we tried many things: using the mini-dataset provided with the HEMlets paper, using another huamn3.6m on SCITAS (that uses CSV files, that we had to try and convert into something usable), etc... We were finaly able to use the data_2d_h36m.npz and the data_3d_h36m.npz files together with the videos. 
 The ```dataset.py``` file allows the user to choose if they wish to use the entire dataset or just a particular batch or scene. 
 
-## Results
+### Results
 
 Since we were not able to train the network properly on the entire dataset, we did the inference with the weights provided with the paper. The following images show an image (extracted from one of the viedos provided for the class). Our YOLO extracts the people one by one, and the network detects the 3D pose of each one of them. 
 
@@ -128,15 +128,8 @@ Since we were not able to train the network properly on the entire dataset, we d
 
 
 
+## Conclusion
 
-
-
-
-
-
-
-
-
-
+In summary, our project focused on implementing the HEMlets network for 3D human pose estimation. Although we faced time constraints that prevented us from training the network, we wrote the entire code and tested on a few images. We included a YOLO in the script to detect humans and facilitate the 3D pose estimation. Choosing to do a 3D pose estimation based on the image directly and not through lifting allowed us to try something different, despite the added difficulty. 
 
 
