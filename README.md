@@ -80,10 +80,14 @@ To run the tests on the video from the class go to the Inference_on_video folder
 
 ## Report
 
+We were tasked to trian a network to detect the 3D human pose. There are two options to do this: lifting a 2D skeleton into 3D, or using the entire image. We started by trying out the lifting and it seemed pretty simple. We therefore wanted to try the 3D human pose detection from the image directly. This task is more difficult than lifting, but there is less information loss, which makes it interesting. 
+
 ### Contribution
-As we were unable to find the training code online, we wrote a training script based on the paper and on the inference provided with their Github Repo. In the original paper the authors flip the image and runs it in the network twice. They can then do a sort of mean to determine the 3D pose of the human detected. In our script we do not need to do this image flipping, allowing us to go twice as fast, which is what is needed for a real time application. 
+As we were unable to find the training code online, we wrote a training script based on the paper and on the inference provided with their Github Repo. In the original paper the authors flip the image and runs it in the network twice. They can then do a sort of mean to determine the 3D pose of the human detected. In our script we do not need to do this image flipping, allowing us to go twice as fast, which is what is needed for a real time application. In consequence, when we run our inference, with their weights, the skeleton is slightly diagonal.
 
 <img src="./images/HEMlets_Us.png" width=786>
+
+This would probably have been corrected if we would have had time to train our network and would have had our weights. 
 
 ### Experimental setup
 In order to test our code we started by first training on a single image to see if we where able to overfit the results to the ground truth. This was done succesfully. Since we had a lot of trouble obtaining the human3.6m dataset, we lost a lot of time, wwhich is why we where not able to train on the full dataset. We therefore used the weights provded by the HEMlets authors to do the inference. 
