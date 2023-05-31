@@ -51,6 +51,8 @@ The following architechture must be followed:
 - Inference_in_video
 
 
+
+
 Create a new Conda environement:
 ```conda create -n DLAV python=3.7.7```
 
